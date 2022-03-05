@@ -1,15 +1,22 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, Float, String, Date, Enum
 from sqlalchemy.orm import relationship
 from db_service.database import Base
+import enum
+
+
+class PercentDiscountType(enum.Enum):
+    under_15 = 1
+    from_15_to_25 = 2
+    upper_25 = 3
 
 
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    phone = Column(String, unique=True)
+    username = Column(String, index=True)
     is_active = Column(Boolean, default=True)
-    discount_perc = Column(Enum(1, 15, 25), index=True)
+    discount_perc = Column(Enum(PercentDiscountType), index=True)
 
     subs = relationship("Subscription", back_populates="owner")
 
@@ -17,7 +24,7 @@ class User(Base):
 class Subscription(Base):
     __tablename__ = 'subscriptions'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String, primary_key=True)
     item_id = Column(Integer, ForeignKey("items.id"))
     user_id = Column(Integer, ForeignKey("users.id"))
 
@@ -43,7 +50,8 @@ class Item(Base):
 class Price(Base):
     __tablename__ = "prices"
 
-    item_id = Column(Integer, ForeignKey("items.id"), primary_key=True)
+    id = Column(String, primary_key=True)
+    item_id = Column(Integer, ForeignKey("items.id"))
     price = Column(Float, index=True)
     insert_date = Column(Date)
 

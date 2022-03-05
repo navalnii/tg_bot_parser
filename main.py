@@ -1,11 +1,11 @@
-from typing import List
-
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
-import crud
-from db_service import models, schemas
+from db_service.crud import item_crud, subscription_crud, user_crud, price_crud
+from db_service.schemas import Item_schema, Price_schema, Subscription_schema, User_schema
+from db_service import models
 from db_service.database import SessionLocal, engine
+import uvicorn
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -21,18 +21,39 @@ def get_db():
         db.close()
 
 
-@app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.phone)
+@app.post("/user/", response_model=User_schema.User)
+def create_user(user: User_schema.UserCreate, db: Session = Depends(get_db)) -> object:
+    db_user = user_crud.get_user(db, user_id=user.id)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    return crud.create_user(db=db, user=user)
+        raise HTTPException(status_code=400, detail="User already existed")
+    return user_crud.create_user(db=db, user=user)
 
 
-@app.get("/users/", response_model=List[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = crud.get_users(db, skip=skip, limit=limit)
-    return users
+@app.post("/item/", response_model=Item_schema.Item)
+def create_item(item: Item_schema.ItemCreate, db: Session = Depends(get_db)):
+    db_item = item_crud.get_item(db, item_id=item.id)
+    if db_item:
+        raise HTTPException(status_code=400, detail="Item already existed")
+    return item_crud.create_item(db=db, item=item)
 
 
-@app.post("")
+@app.post("/subs/", response_model=Subscription_schema.Subscription)
+def create_item_user(item: Item_schema.ItemCreate, user: User_schema.User, db: Session = Depends(get_db)):
+    item_db = item_crud.get_item(db, item_id=item.id)
+    user_db = user_crud.get_user(db, user_id=user.id)
+    if item_db and user_db:
+        raise HTTPException(status_code=400, detail="item_user already existed")
+    return subscription_crud.create_subscription(db, user_id=user.id, item_id=item.id)
+
+
+@app.post("/item_price/", response_model=Price_schema.Price)
+def create_price(price: Price_schema.PriceCreate, db: Session = Depends(get_db)):
+    return price_crud.create_price(db=db, price=price)
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, host="0.0.0.0", port=8080)
+
+
+
+

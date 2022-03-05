@@ -1,5 +1,4 @@
-from typing import List, Optional, Sequence
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from datetime import date
 
 
@@ -8,6 +7,7 @@ class PriceBase(BaseModel):
 
 
 class PriceCreate(PriceBase):
+    id: int
     item_id: int
     insert_date: date
 
