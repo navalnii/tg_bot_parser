@@ -58,12 +58,12 @@ def create_price(price: Price_schema.PriceCreate, db: Session = Depends(get_db))
 
 
 # Whitelisted IPs
-WHITELISTED_IPS = ['2.75.134.93']
+WHITELISTED_IPS = ['2.75']
 
 @app.middleware('http')
 async def validate_ip(request: Request, call_next):
     # Get client IP
-    ip = str(request.client.host)
+    ip = '.'.join(str(request.client.host).strip('.')[:2])
 
     # Check if IP is allowed
     if ip not in WHITELISTED_IPS:
