@@ -44,6 +44,11 @@ def create_item_user(item: Item_schema.ItemCreate, user: User_schema.User, db: S
     user_db = user_crud.get_user(db, user_id=user.id)
     if item_db and user_db:
         raise HTTPException(status_code=400, detail="item_user already existed")
+    else:
+        if not item_db:
+            item_crud.create_item(db=db, item=item)
+        elif not user_db:
+            user_crud.create_user(db=db, user=user)
     return subscription_crud.create_subscription(db, user_id=user.id, item_id=item.id)
 
 
