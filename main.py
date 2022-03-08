@@ -43,7 +43,7 @@ def create_item_user(item: Item_schema.ItemCreate, user: User_schema.User, db: S
     item_db = item_crud.get_item(db, item_id=item.id)
     user_db = user_crud.get_user(db, user_id=user.id)
     if item_db and user_db:
-        raise HTTPException(status_code=400, detail="item_user already existed")
+        raise HTTPException(status_code=400, detail="Item-User already existed")
     else:
         if not item_db:
             item_crud.create_item(db=db, item=item)
@@ -58,12 +58,13 @@ def create_price(price: Price_schema.PriceCreate, db: Session = Depends(get_db))
 
 
 # Whitelisted IPs
-WHITELISTED_IPS = ['2.75']
+WHITELISTED_IPS = ['2.75', '127.0']
+
 
 @app.middleware('http')
 async def validate_ip(request: Request, call_next):
     # Get client IP
-    ip = '.'.join(str(request.client.host).strip('.')[:2])
+    ip = '.'.join(str(request.client.host).split('.')[:2])
 
     # Check if IP is allowed
     if ip not in WHITELISTED_IPS:

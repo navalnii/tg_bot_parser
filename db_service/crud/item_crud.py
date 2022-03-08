@@ -8,7 +8,7 @@ def get_item(db: Session, item_id):
 
 
 def create_item(db: Session, item: Item_schema.ItemCreate):
-    db_item = models.Item(**item)
+    db_item = models.Item(**item.dict())
     db.add(db_item)
     db.commit()
     db.refresh(db_item)

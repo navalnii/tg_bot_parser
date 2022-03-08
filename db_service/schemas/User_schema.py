@@ -4,28 +4,28 @@ from typing import Sequence, List, Tuple
 from db_service.schemas.Item_schema import Item
 
 
+class UserBase(BaseModel):
+    pass
+
+
 class PercentDiscountType(str, Enum):
     under_15 = 'under_15'
     from_15_to_25 = 'from_15_to_25'
     upper_25 = 'upper_25'
 
 
-class UserBase(BaseModel):
-    pass
-
-
 class UserCreate(UserBase):
     id: int
     username: str
     is_active: bool = True
-    discount_perc: List[PercentDiscountType]
+    discount_perc: PercentDiscountType = ""
 
 
 class User(UserBase):
     id: int
     username: str
     is_active: bool = True
-    discount_perc: str
+    discount_perc: PercentDiscountType = ""
 
     class Config:
         orm_mode = True

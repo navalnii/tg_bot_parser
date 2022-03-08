@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, Float, String, Date, Enum
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, Float, String, DateTime, Enum
 from sqlalchemy.orm import relationship
 from db_service.database import Base
 import enum
@@ -16,7 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, index=True)
     is_active = Column(Boolean, default=True)
-    discount_perc = Column(Enum(PercentDiscountType), index=True)
+    discount_perc = Column(String, index=True)
 
     subs = relationship("Subscription", back_populates="owner")
 
@@ -41,7 +41,7 @@ class Item(Base):
     description = Column(String)
     url = Column(String, index=True)
     cato_id = Column(String, index=True)
-    insert_date = Column(Date)
+    insert_date = Column(DateTime)
 
     item = relationship("Subscription", back_populates="owner_")
     item_price = relationship("Price", back_populates="price_id")
@@ -53,7 +53,7 @@ class Price(Base):
     id = Column(String, primary_key=True)
     item_id = Column(Integer, ForeignKey("items.id"))
     price = Column(Float, index=True)
-    insert_date = Column(Date)
+    insert_date = Column(DateTime)
 
     price_id = relationship("Item", back_populates="item_price", uselist=False)
 

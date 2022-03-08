@@ -1,12 +1,10 @@
-from typing import List, Optional, Sequence
+from typing import Optional
 from pydantic import BaseModel, HttpUrl
-from datetime import date
+from datetime import datetime
 
 
 class ItemBase(BaseModel):
-    source: str
-    title: str
-    description: Optional[str] = None
+    pass
 
 
 class ItemCreate(ItemBase):
@@ -16,7 +14,7 @@ class ItemCreate(ItemBase):
     source: str
     cato_id: str
     url: HttpUrl
-    insert_date: date
+    insert_date: datetime
 
 
 class Item(ItemBase):
@@ -26,7 +24,7 @@ class Item(ItemBase):
     source: str
     cato_id: str
     url: HttpUrl
-    insert_date: date
+    insert_date: datetime
 
     class Config:
         orm_mode = True
