@@ -57,13 +57,13 @@ async def send_welcome(message: types.Message):
 async def callback_discount(call: types.CallbackQuery, callback_data: dict):
     percent = callback_data["percent"]
     # create user in db
-    if config.telegram_mode == 'webhooks':
-        requests.post(config.db_service_api + '/user/',
-                      data={
-                          'id': call.from_user.id,
-                          'username': call.from_user.username,
-                          'discount_perc': percent
-                      })
+    # if config.telegram_mode == 'webhooks':
+    requests.post(config.db_service_api + '/user/',
+                  data={
+                      'id': call.from_user.id,
+                      'username': call.from_user.username,
+                      'discount_perc': percent
+                  })
     await call.message.reply(f'Siz {config.BUTTONS.get(percent)}% deıingi jeńildikterdi tańdadyńyz.', reply_markup=types.ReplyKeyboardRemove())
 
 

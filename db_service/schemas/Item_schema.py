@@ -11,15 +11,21 @@ class ItemBase(BaseModel):
 
 class ItemCreate(ItemBase):
     id: int
-    url: HttpUrl
+    title: str
+    description: Optional[str] = None
+    source: str
     cato_id: str
+    url: HttpUrl
     insert_date: date
 
 
 class Item(ItemBase):
     id: int
-    url: HttpUrl
+    title: str
+    description: Optional[str] = None
+    source: str
     cato_id: str
+    url: HttpUrl
     insert_date: date
 
     class Config:

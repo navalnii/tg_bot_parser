@@ -1,4 +1,5 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from db_service.crud import item_crud, subscription_crud, user_crud, price_crud
@@ -49,6 +50,25 @@ def create_item_user(item: Item_schema.ItemCreate, user: User_schema.User, db: S
 @app.post("/item_price/", response_model=Price_schema.Price)
 def create_price(price: Price_schema.PriceCreate, db: Session = Depends(get_db)):
     return price_crud.create_price(db=db, price=price)
+
+
+# Whitelisted IPs
+WHITELISTED_IPS = ['2.75.134.93']
+
+@app.middleware('http')
+async def validate_ip(request: Request, call_next):
+    # Get client IP
+    ip = str(request.client.host)
+
+    # Check if IP is allowed
+    if ip not in WHITELISTED_IPS:
+        data = {
+            'message': f'IP {ip} is not allowed to access this resource.'
+        }
+        return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=data)
+
+    # Proceed if IP is allowed
+    return await call_next(request)
 
 
 if __name__ == '__main__':
