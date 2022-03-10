@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from datetime import date
 
 
 class PriceBase(BaseModel):
@@ -7,9 +6,7 @@ class PriceBase(BaseModel):
 
 
 class PriceCreate(PriceBase):
-    id: int
     item_id: int
-    insert_date: date
 
 
 class Price(PriceBase):

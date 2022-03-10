@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
-from typing import Sequence, List, Tuple
-from db_service.schemas.Item_schema import Item
+from typing import Tuple
+from db_service.schemas.item_schema import Item
 
 
 class UserBase(BaseModel):
@@ -18,14 +18,14 @@ class UserCreate(UserBase):
     id: int
     username: str
     is_active: bool = True
-    discount_perc: PercentDiscountType = ""
+    discount_perc: PercentDiscountType = None
 
 
 class User(UserBase):
     id: int
     username: str
     is_active: bool = True
-    discount_perc: PercentDiscountType = ""
+    discount_perc: PercentDiscountType = None
 
     class Config:
         orm_mode = True

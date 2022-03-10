@@ -14,7 +14,6 @@ class ItemCreate(ItemBase):
     source: str
     cato_id: str
     url: HttpUrl
-    insert_date: datetime
 
 
 class Item(ItemBase):
@@ -24,7 +23,6 @@ class Item(ItemBase):
     source: str
     cato_id: str
     url: HttpUrl
-    insert_date: datetime
 
     class Config:
         orm_mode = True

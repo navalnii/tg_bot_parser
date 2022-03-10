@@ -1,7 +1,11 @@
 import uuid
 from sqlalchemy.orm import Session
-
 from db_service import models
+
+
+def get_subs(db: Session, user_id: int, item_id: int):
+    return db.query(models.Subscription).filter((models.Subscription.user_id == user_id) &
+                                                (models.Subscription.item_id == item_id)).first()
 
 
 def create_subscription(db: Session, user_id: int, item_id: int):
