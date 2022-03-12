@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 import logging
 
@@ -16,7 +17,7 @@ load_dotenv()
 API_TOKEN = os.environ['API_TELEGRAM_TOKEN']
 
 # webhook settings
-WEBHOOK_HOST = 'https://95.181.226.67'
+WEBHOOK_HOST = 'https://45.129.0.139'
 WEBHOOK_PATH = f'/bot{API_TOKEN}'
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
@@ -34,12 +35,13 @@ callback_percent = CallbackData("name", "percent")
 
 
 def reply_keyboard():
-    reply_markup = types.InlineKeyboardMarkup()
     keyboard = [
         types.InlineKeyboardButton(text=config.BUTTONS.get('under_15'), callback_data=callback_percent.new(percent='under_15')),
         types.InlineKeyboardButton(text=config.BUTTONS.get('from_15_to_25'), callback_data=callback_percent.new(percent='from_15_to_25')),
-        types.InlineKeyboardButton(text=config.BUTTONS.get('upper_25'), callback_data=callback_percent.new(percent='upper_25'))
+        types.InlineKeyboardButton(text=config.BUTTONS.get('upper_25'), callback_data=callback_percent.new(percent='upper_25')),
+        types.InlineKeyboardButton(text="Rastaý", callback_data=callback_percent.new(percent="finish"))
     ]
+    reply_markup = types.InlineKeyboardMarkup(row_width=2)
     reply_markup.add(*keyboard)
     return reply_markup
 
@@ -56,15 +58,28 @@ async def send_welcome(message: types.Message):
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
 async def callback_discount(call: types.CallbackQuery, callback_data: dict):
     percent = callback_data["percent"]
+    print(callback_data)
     # create user in db
     # if config.telegram_mode == 'webhooks':
-    requests.post(config.db_service_api + '/user/',
-                  data={
-                      'id': call.from_user.id,
-                      'username': call.from_user.username,
-                      'discount_perc': percent
-                  })
-    await call.message.reply(f'Siz {config.BUTTONS.get(percent)}% deıingi jeńildikterdi tańdadyńyz.', reply_markup=types.ReplyKeyboardRemove())
+    resp = requests.post(config.db_service_api + 'user/',
+                         data=json.dumps({
+                             'id': call.from_user.id,
+                             'username': call.from_user.username,
+                             'discount_perc': percent
+                                }))
+    if resp.status_code == 200:
+        await call.answer(text=f"Siz {config.BUTTONS.get(percent)}% deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
+        await call.message.reply(f'Siz {config.BUTTONS.get(percent)}% deıingi jeńildikterdi tańdadyńyz.',
+                                 reply_markup=types.ReplyKeyboardRemove())
+    else:
+        print(resp.text)
+
+
+# @dp.callback_query_handler(callback_percent.filter(percent=["finish"]))
+# async def callbacks_discount_finish(call: types.CallbackQuery):
+#     user_value = user_data.get(call.from_user.id, 0)
+#     await call.message.edit_text(f"Итого: {user_value}")
+#     await call.answer()
 
 
 @dp.message_handler()

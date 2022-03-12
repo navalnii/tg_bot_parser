@@ -1,5 +1,5 @@
 telegram_mode = 'local'
-db_service_api = '95.181.226.67'
+db_service_api = 'http://45.129.0.139:8080/'
 
 BUTTONS = {
     'under_15':'jeńildik < 15%',

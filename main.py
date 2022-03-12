@@ -6,11 +6,13 @@ from db_service.crud import item_crud, subscription_crud, user_crud, price_crud
 from db_service.schemas import item_schema, price_schema, subscription_schema, user_schema
 from db_service import models
 from db_service.database import SessionLocal, engine
+import logger
 import uvicorn
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(debug=True)
+logger = logger.logger_init('fastapi')
 
 
 # Dependency
@@ -68,7 +70,6 @@ async def validate_ip(request: Request, call_next):
     # Get client IP
     ip = '.'.join(str(request.client.host).split('.')[:2])
 
-    # Check if IP is allowed
     if ip not in WHITELISTED_IPS:
         data = {
             'message': f'IP {ip} is not allowed to access this resource.'
