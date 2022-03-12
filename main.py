@@ -28,7 +28,8 @@ def get_db():
 def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)) -> object:
     db_user = user_crud.get_user(db, user_id=user.id)
     if db_user:
-        raise HTTPException(status_code=400, detail="User already existed")
+        return user_crud.update_user(db=db, user=user)
+        # raise HTTPException(status_code=400, detail="User already existed")
     return user_crud.create_user(db=db, user=user)
 
 

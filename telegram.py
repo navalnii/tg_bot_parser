@@ -39,7 +39,6 @@ def reply_keyboard():
         types.InlineKeyboardButton(text=config.BUTTONS.get('under_15'), callback_data=callback_percent.new(percent='under_15')),
         types.InlineKeyboardButton(text=config.BUTTONS.get('from_15_to_25'), callback_data=callback_percent.new(percent='from_15_to_25')),
         types.InlineKeyboardButton(text=config.BUTTONS.get('upper_25'), callback_data=callback_percent.new(percent='upper_25')),
-        types.InlineKeyboardButton(text="Rastaý", callback_data=callback_percent.new(percent="finish"))
     ]
     reply_markup = types.InlineKeyboardMarkup(row_width=2)
     reply_markup.add(*keyboard)
@@ -58,9 +57,7 @@ async def send_welcome(message: types.Message):
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
 async def callback_discount(call: types.CallbackQuery, callback_data: dict):
     percent = callback_data["percent"]
-    print(callback_data)
     # create user in db
-    # if config.telegram_mode == 'webhooks':
     resp = requests.post(config.db_service_api + 'user/',
                          data=json.dumps({
                              'id': call.from_user.id,
@@ -73,13 +70,6 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
                                  reply_markup=types.ReplyKeyboardRemove())
     else:
         print(resp.text)
-
-
-# @dp.callback_query_handler(callback_percent.filter(percent=["finish"]))
-# async def callbacks_discount_finish(call: types.CallbackQuery):
-#     user_value = user_data.get(call.from_user.id, 0)
-#     await call.message.edit_text(f"Итого: {user_value}")
-#     await call.answer()
 
 
 @dp.message_handler()
