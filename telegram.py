@@ -1,7 +1,8 @@
 import os
+import ssl
 import json
 from dotenv import load_dotenv
-import logging
+import logger
 
 import requests
 from aiogram import Bot, types, executor
@@ -12,20 +13,22 @@ from aiogram.utils.executor import start_webhook
 from aiogram.utils.callback_data import CallbackData
 import config
 
+
 load_dotenv()
 
 API_TOKEN = os.environ['API_TELEGRAM_TOKEN']
 
 # webhook settings
-WEBHOOK_HOST = 'https://45.129.0.139'
+WEBHOOK_HOST = os.environ['HOST']
 WEBHOOK_PATH = f'/bot{API_TOKEN}'
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}"
 
 # webserver settings
 WEBAPP_HOST = 'localhost'  # or ip
-WEBAPP_PORT = 8443
+WEBAPP_PORT = 3001
 
-logging.basicConfig(level=logging.INFO)
+logger = logger.logger_init('telegram')
+
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
@@ -34,13 +37,17 @@ dp.middleware.setup(LoggingMiddleware())
 callback_percent = CallbackData("name", "percent")
 
 
+WEBHOOK_SSL_CERT = ""
+WEBHOOK_SSL_PRIV = ""
+
+
 def reply_keyboard():
     keyboard = [
         types.InlineKeyboardButton(text=config.BUTTONS.get('under_15'), callback_data=callback_percent.new(percent='under_15')),
         types.InlineKeyboardButton(text=config.BUTTONS.get('from_15_to_25'), callback_data=callback_percent.new(percent='from_15_to_25')),
         types.InlineKeyboardButton(text=config.BUTTONS.get('upper_25'), callback_data=callback_percent.new(percent='upper_25')),
     ]
-    reply_markup = types.InlineKeyboardMarkup(row_width=2)
+    reply_markup = types.InlineKeyboardMarkup(row_width=3)
     reply_markup.add(*keyboard)
     return reply_markup
 
@@ -87,7 +94,7 @@ async def on_startup(dp):
 
 
 async def on_shutdown(dp):
-    logging.warning('Shutting down..')
+    logger.warning('Shutting down..')
 
     # insert code here to run it before shutdown
 
@@ -98,7 +105,11 @@ async def on_shutdown(dp):
     await dp.storage.close()
     await dp.storage.wait_closed()
 
-    logging.warning('Bye!')
+    logger.warning('Bye!')
+
+
+context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
 
 
 if __name__ == '__main__':
@@ -108,9 +119,9 @@ if __name__ == '__main__':
             webhook_path=WEBHOOK_PATH,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
-            skip_updates=True,
+            # skip_updates=True,
             host=WEBAPP_HOST,
-            port=WEBAPP_PORT,
+            port=WEBAPP_PORT
         )
     else:
         executor.start_polling(dp, skip_updates=True)

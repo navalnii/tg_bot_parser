@@ -1,5 +1,4 @@
-telegram_mode = 'local'
-db_service_api = 'http://45.129.0.139:8080/'
+telegram_mode = 'webhooks'
 
 BUTTONS = {
     'under_15':'jeńildik < 15%',
