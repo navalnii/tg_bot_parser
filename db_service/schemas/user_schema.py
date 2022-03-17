@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel
-from typing import Tuple
+from typing import Tuple, List
 from db_service.schemas.item_schema import Item
 
 
@@ -32,5 +32,7 @@ class User(UserBase):
 
 
 class UserGetItems(UserBase):
-    results: Tuple[Item]
+    results: List[Item]
+
+
 

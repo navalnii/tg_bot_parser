@@ -24,8 +24,8 @@ WEBHOOK_URL_PATH = '/webhook'  # Part of URL
 
 # This options needed if you use self-signed SSL certificate
 # Instructions: https://core.telegram.org/bots/self-signed
-WEBHOOK_SSL_CERT = ""  # Path to the ssl certificate
-WEBHOOK_SSL_PRIV = ""  # Path to the ssl private key
+WEBHOOK_SSL_CERT = "/etc/ssl/certs/apache-selfsigned.crt"  # Path to the ssl certificate
+WEBHOOK_SSL_PRIV = "/etc/ssl/private/apache-selfsigned.key"  # Path to the ssl private key
 
 WEBHOOK_URL = f"https://{WEBHOOK_HOST}:{WEBHOOK_PORT}{WEBHOOK_URL_PATH}"
 
@@ -137,9 +137,7 @@ async def on_startup(app):
         if not webhook.url:
             await bot.delete_webhook()
 
-        # Set new URL for webhook
         await bot.set_webhook(WEBHOOK_URL, certificate=open(WEBHOOK_SSL_CERT, 'rb'))
-        # If you want to use free certificate signed by LetsEncrypt you need to set only URL without sending certificate.
 
 
 async def on_shutdown(app):

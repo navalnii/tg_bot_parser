@@ -33,6 +33,11 @@ def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)) -> 
     return user_crud.create_user(db=db, user=user)
 
 
+@app.get("/items/")
+def get_items(user_id: int, db: Session = Depends(get_db)) -> object:
+    return user_crud.get_user_items(db, user_id)
+
+
 @app.post("/item/", response_model=item_schema.Item)
 def create_item(item: item_schema.ItemCreate, db: Session = Depends(get_db)):
     db_item = item_crud.get_item(db, item_id=item.id)
@@ -48,7 +53,7 @@ def create_subs(item: item_schema.ItemCreate, user_id: int, db: Session = Depend
     if item_db and user_db:
         subs_db = subscription_crud.get_subs(db, item_id=item.id, user_id=user_id)
         if subs_db:
-            raise HTTPException(status_code=400, detail="Item-User already existed")
+            raise HTTPException(status_code=406, detail="Item-User already existed")
         else:
             return subscription_crud.create_subscription(db, user_id=user_id, item_id=item.id)
     elif not item_db and user_db:

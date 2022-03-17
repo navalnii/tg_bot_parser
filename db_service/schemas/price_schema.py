@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class PriceBase(BaseModel):
     price: float
+    seller: str
 
 
 class PriceCreate(PriceBase):

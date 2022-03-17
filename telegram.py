@@ -1,13 +1,15 @@
 import os
+import re
 import ssl
 import json
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 import logger
 
 import requests
 from aiogram import Bot, types, executor
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from aiogram.dispatcher import Dispatcher
+from aiogram.dispatcher import Dispatcher, filters
 from aiogram.dispatcher.webhook import SendMessage
 from aiogram.utils.executor import start_webhook
 from aiogram.utils.callback_data import CallbackData
@@ -37,8 +39,8 @@ dp.middleware.setup(LoggingMiddleware())
 callback_percent = CallbackData("name", "percent")
 
 
-WEBHOOK_SSL_CERT = ""
-WEBHOOK_SSL_PRIV = ""
+WEBHOOK_SSL_CERT = "/etc/ssl/certs/apache-selfsigned.crt"
+WEBHOOK_SSL_PRIV = "/etc/ssl/private/apache-selfsigned.key"
 
 
 def reply_keyboard():
@@ -61,6 +63,13 @@ async def send_welcome(message: types.Message):
                                 "Bastaý úshin maǵan qandaı jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
 
 
+@dp.message_handler(commands=['get_items'])
+async def get_items(message: types.Message):
+    resp = requests.get(config.db_service_api + 'items/')
+    if resp.status_code == 200:
+        return await message.answer(resp.text)
+
+
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
 async def callback_discount(call: types.CallbackQuery, callback_data: dict):
     percent = callback_data["percent"]
@@ -72,20 +81,47 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
                              'discount_perc': percent
                                 }))
     if resp.status_code == 200:
-        await call.answer(text=f"Siz {config.BUTTONS.get(percent)}% deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
-        await call.message.reply(f'Siz {config.BUTTONS.get(percent)}% deıingi jeńildikterdi tańdadyńyz.',
-                                 reply_markup=types.ReplyKeyboardRemove())
+        await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
+        await call.message.delete()
     else:
         print(resp.text)
 
 
-@dp.message_handler()
-async def echo(message: types.Message):
-    # Regular request
-    # await bot.send_message(message.chat.id, message.text)
+# filter url from messages
+@dp.message_handler(regexp='((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*')
+async def get_urls(message: types.Message):
+    url = urlparse(message.text)
 
-    # or reply INTO webhook
-    return SendMessage(message.chat.id, message.text)
+    if url.netloc == 'kaspi.kz':
+        title = url.path.split('/')[-2]
+        id = title.split('-')[-1]
+        resp = requests.post(config.db_service_api + 'subs/',
+                             params={'user_id': message.from_user.id},
+                             data=json.dumps({
+                                 'id': id,
+                                 'title': title,
+                                 'description': '',
+                                 'source': url.netloc,
+                                 'cato_id': re.findall('\d{7}', url.query)[0],
+                                 'url': message.text
+                             }))
+        if resp.status_code == 200:
+            await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
+
+        elif resp.status_code == 406:
+            await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
+            print(resp.text)
+
+
+
+
+# @dp.message_handler()
+# async def echo(message: types.Message):
+#     # Regular request
+#     # await bot.send_message(message.chat.id, message.text)
+#
+#     # or reply INTO webhook
+#     return SendMessage(message.chat.id, message.text)
 
 
 async def on_startup(dp):
@@ -119,7 +155,7 @@ if __name__ == '__main__':
             webhook_path=WEBHOOK_PATH,
             on_startup=on_startup,
             on_shutdown=on_shutdown,
-            # skip_updates=True,
+            skip_updates=True,
             host=WEBAPP_HOST,
             port=WEBAPP_PORT
         )

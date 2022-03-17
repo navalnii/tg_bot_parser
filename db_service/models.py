@@ -46,6 +46,7 @@ class Price(Base):
 
     id = Column(String, primary_key=True)
     item_id = Column(Integer, ForeignKey("items.id"))
+    seller = Column(String, primary_key=True)
     price = Column(Float, index=True)
     insert_date = Column(DateTime)
 
