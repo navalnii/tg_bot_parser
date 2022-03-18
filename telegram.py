@@ -32,7 +32,7 @@ WEBAPP_PORT = 3001
 logger = logger.logger_init('telegram')
 
 
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=API_TOKEN, parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
@@ -65,9 +65,12 @@ async def send_welcome(message: types.Message):
 
 @dp.message_handler(commands=['get_items'])
 async def get_items(message: types.Message):
-    resp = requests.get(config.db_service_api + 'items/')
+    resp = requests.get(config.db_service_api + f'items/?user_id={message.from_user.id}')
     if resp.status_code == 200:
-        return await message.answer(resp.text)
+        ans = f'Qazirgi ýaqytta sizde kelesi ónimder bar:\n\n'
+        for ind, item in enumerate(json.loads(resp.content)['results']):
+            ans += f'<b>{ind+1}. {item["title"]}</b>\nlink: <u>{item["url"]}</u>\n\n'
+        return await message.answer(ans, disable_web_page_preview=False)
 
 
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
@@ -77,9 +80,10 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
     resp = requests.post(config.db_service_api + 'user/',
                          data=json.dumps({
                              'id': call.from_user.id,
+                             'chat_id': call.message.chat.id,
                              'username': call.from_user.username,
                              'discount_perc': percent
-                                }))
+                         }))
     if resp.status_code == 200:
         await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
         await call.message.delete()
@@ -91,7 +95,6 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
 @dp.message_handler(regexp='((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*')
 async def get_urls(message: types.Message):
     url = urlparse(message.text)
-
     if url.netloc == 'kaspi.kz':
         title = url.path.split('/')[-2]
         id = title.split('-')[-1]
@@ -161,3 +164,5 @@ if __name__ == '__main__':
         )
     else:
         executor.start_polling(dp, skip_updates=True)
+
+

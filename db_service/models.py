@@ -8,6 +8,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    chat_id = Column(Integer, index=True)
     username = Column(String, index=True)
     is_active = Column(Boolean, default=True)
     discount_perc = Column(String, index=True)

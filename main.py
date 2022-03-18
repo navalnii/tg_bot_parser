@@ -33,9 +33,16 @@ def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)) -> 
     return user_crud.create_user(db=db, user=user)
 
 
-@app.get("/items/")
-def get_items(user_id: int, db: Session = Depends(get_db)) -> object:
-    return user_crud.get_user_items(db, user_id)
+@app.get("/items_user/", response_model=user_schema.UserGetItems)
+def get_items_user(user_id: int, db: Session = Depends(get_db)) -> object:
+    res = user_crud.get_user_items(db, user_id)
+    return {'results': list(res)}
+
+
+@app.get("/urls/", response_model=user_schema.UserGetItems)
+def get_urls(db: Session = Depends(get_db)) -> object:
+    res = item_crud.get_items(db)
+    return {'results': list(res)}
 
 
 @app.post("/item/", response_model=item_schema.Item)
