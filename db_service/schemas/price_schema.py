@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from typing import Sequence
+from db_service.schemas.item_schema import Item
 
 
 class PriceBase(BaseModel):
@@ -15,3 +17,5 @@ class Price(PriceBase):
 
     class Config:
         orm_mode = True
+
+

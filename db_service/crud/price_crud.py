@@ -6,8 +6,10 @@ from db_service import models
 from db_service.schemas import price_schema
 
 
-def get_price(db: Session, item_id: int):
-    return db.query(models.Price).filter(models.Price.item_id == item_id).first()
+def get_item_prices(db: Session, item_id: int, limit: int):
+    return db.query(models.Price).join(models.Item).\
+        filter(models.Item.id == item_id).\
+        order_by(models.Price.insert_date.desc()).limit(limit).all()
 
 
 def create_price(db: Session, price: price_schema.PriceCreate):

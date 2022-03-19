@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse
 import logger
 
+import httpx
 import requests
+import asyncio
+import aioschedule
 from aiogram import Bot, types, executor
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.dispatcher import Dispatcher, filters
@@ -39,8 +42,6 @@ dp.middleware.setup(LoggingMiddleware())
 callback_percent = CallbackData("name", "percent")
 
 
-WEBHOOK_SSL_CERT = "/etc/ssl/certs/apache-selfsigned.crt"
-WEBHOOK_SSL_PRIV = "/etc/ssl/private/apache-selfsigned.key"
 
 
 def reply_keyboard():
@@ -71,6 +72,11 @@ async def get_items(message: types.Message):
         for ind, item in enumerate(json.loads(resp.content)['results']):
             ans += f'<b>{ind+1}. {item["title"]}</b>\nlink: <u>{item["url"]}</u>\n\n'
         return await message.answer(ans, disable_web_page_preview=False)
+
+
+@dp.message_handler(commands=['unsubscribe'])
+async def unsubscribe(message: types.Message):
+    pass
 
 
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
@@ -116,20 +122,29 @@ async def get_urls(message: types.Message):
             print(resp.text)
 
 
+async def send_notification(message: types.Message):
+    async with httpx.AsyncClient() as client:
+        user_info = await client.get(config.db_service_api + 'user_info')
+    if user_info['discount_perc'] == 'under_15':
+
+        pass
+    elif user_info['discount_perc'] == 'from_15_to_25':
+        pass
+    elif user_info['discount_perc'] == 'upper_25':
+        pass
 
 
-# @dp.message_handler()
-# async def echo(message: types.Message):
-#     # Regular request
-#     # await bot.send_message(message.chat.id, message.text)
-#
-#     # or reply INTO webhook
-#     return SendMessage(message.chat.id, message.text)
+
+async def on_startup(_):
+    asyncio.create_task(scheduler())
+    # await bot.set_webhook(WEBHOOK_URL)
 
 
-async def on_startup(dp):
-    await bot.set_webhook(WEBHOOK_URL)
-    # insert code here to run it after start
+async def scheduler():
+    aioschedule.every().day.at("12:00").do(send_notification)
+    while True:
+        await aioschedule.run_pending()
+        await asyncio.sleep(1)
 
 
 async def on_shutdown(dp):
@@ -148,7 +163,7 @@ async def on_shutdown(dp):
 
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-context.load_cert_chain(WEBHOOK_SSL_CERT, WEBHOOK_SSL_PRIV)
+context.load_cert_chain(config.WEBHOOK_SSL_CERT, config.WEBHOOK_SSL_PRIV)
 
 
 if __name__ == '__main__':
@@ -163,6 +178,6 @@ if __name__ == '__main__':
             port=WEBAPP_PORT
         )
     else:
-        executor.start_polling(dp, skip_updates=True)
+        executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
 
 

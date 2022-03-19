@@ -24,6 +24,11 @@ def get_db():
         db.close()
 
 
+@app.get("/user_info/", response_model=user_schema.User)
+def user_info(user_id: int, db: Session = Depends(get_db)) -> object:
+    return user_crud.get_user(db, user_id)
+
+
 @app.post("/user/", response_model=user_schema.User)
 def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)) -> object:
     db_user = user_crud.get_user(db, user_id=user.id)
@@ -74,21 +79,36 @@ def create_price(price: price_schema.PriceCreate, db: Session = Depends(get_db))
     return price_crud.create_price(db=db, price=price)
 
 
+@app.get("/get_item_price/")
+def get_item_price(user_id: int, db: Session = Depends(get_db)):
+    results = []
+    user_info = user_crud.get_user(db, user_id)
+    items_list = user_crud.get_user_items(db, user_id)
+    for item in items_list:
+        # 2 - limit sql for calculate discount between prev and curr prices
+        prices = price_crud.get_item_prices(db, item.id, 2)
+        diff_percent = (prices[1].price - prices[0].price) / prices[0].price
+        if user_info.discount_perc == 'under_15' and diff_percent < 0.15:
+            results.append({'item': item, 'price': prices})
+        elif user_info.discount_perc == 'from_15_to_25' and 0.15 < diff_percent < 0.25:
+            results.append({'item': item, 'price': prices})
+        elif user_info.discount_perc == 'upper_25' and 0.25 < diff_percent:
+            results.append({'item': item, 'price': prices})
+    return results
+
+
 # Whitelisted IPs
 WHITELISTED_IPS = ['2.75', '127.0']
 
 
 @app.middleware('http')
 async def validate_ip(request: Request, call_next):
-    # Get client IP
     ip = '.'.join(str(request.client.host).split('.')[:2])
-
     if ip not in WHITELISTED_IPS:
         data = {
             'message': f'IP {ip} is not allowed to access this resource.'
         }
         return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=data)
-
     # Proceed if IP is allowed
     return await call_next(request)
 
