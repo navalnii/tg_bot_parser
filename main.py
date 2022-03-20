@@ -29,11 +29,6 @@ def get_users(db: Session = Depends(get_db)) -> object:
     return {'results': list(user_crud.get_users(db))}
 
 
-# @app.get("/user_info/", response_model=user_schema.User)
-# def user_info(user_id: int, db: Session = Depends(get_db)) -> object:
-#     return user_crud.get_user(db, user_id)
-
-
 @app.post("/user/", response_model=user_schema.User)
 def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)) -> object:
     db_user = user_crud.get_user(db, user_id=user.id)

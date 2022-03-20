@@ -58,8 +58,15 @@ async def send_welcome(message: types.Message):
     """
     This handler will be called when user sends `/start` or `/help` command
     """
-    return await message.answer("Sálem!\nBul marketpleıs jeńildikterdi tekserý bot.\n"
-                                "Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
+    await message.answer(
+        "Sálem!\nBul marketpleıs jeńildikterdi tekserý bot.\n"
+        "Endi bot taýarlardyń baǵasyn belgileýi úshin, onyń url jiberińiz.\n"
+        "\"https://kaspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845/?c=710000000\"\n"
+        "Barlyq ónimder tizimin kórý úshin /get_items jazyńyz.\n"
+        "Bot toqtatý úshin /unsubscribe jazyńyz.\n",
+        disable_web_page_preview=True)
+    return await message.answer("Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
+
 
 
 @dp.message_handler(commands=['get_items'])
@@ -80,12 +87,12 @@ async def unsubscribe(message: types.Message):
     resp = requests.post(config.db_service_api + 'user/',
                          data=json.dumps({
                              'id': message.from_user.id,
-                             'chat_id': message.message.chat.id,
+                             'chat_id': message.chat.id,
                              'username': message.from_user.username,
                              'is_active': False
                          }))
     if resp.status_code == 200:
-        await message.answer(text=f"", show_alert=True)
+        await message.answer(text=f"")
         logger.info(f'User {message.from_user.username} unsubscribeted')
     else:
         logger.error(f'Could not POST user {message.from_user.id}\n{resp.text}')
@@ -104,7 +111,8 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
                          }))
     if resp.status_code == 200:
         logger.info(f'User {call.from_user.username} started bot')
-        await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
+        await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.",
+                          show_alert=True)
         await call.message.delete()
     else:
         logger.error(f'Could not POST user {call.from_user.id}\n{resp.text}')
