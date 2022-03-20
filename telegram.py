@@ -114,7 +114,7 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
 @dp.message_handler(regexp='((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*')
 async def get_urls(message: types.Message):
     url = urlparse(message.text)
-    id, title, desc = await parser.parse_title_desc(url)
+    id, title, desc = await parser.parse_title_desc(message.text)
     if url.netloc == 'kaspi.kz':
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},

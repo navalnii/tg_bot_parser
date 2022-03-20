@@ -1,3 +1,5 @@
+import requests
+
 import config
 import json
 import httpx
@@ -19,34 +21,34 @@ def items():
 
 
 async def kaspi_price_parse(link: str, item_id: int):
-    async with httpx.AsyncClient() as client:
+    with httpx.AsyncClient() as client:
         resp = await client.get(link, headers=config.kaspi_headers)
-        if resp.status_code == 200:
-            soup = BeautifulSoup(resp.content, 'html.parser')
-            table = soup.find('div', {'class': 'offer-selection__content-el _active'})
-            dct = table.find('script').text.split('BACKEND.components.sellersOffers=')[-1]
-            dct = json.loads(dct[:-1])
-            price = float(dct['components'][0]['offers'][0]['unitSalePrice'])
-            seller = dct['components'][0]['offers'][0]['name']
-            db_resp = await client.post(config.db_service_api + 'item_price/',
-                                        data=json.dumps({
-                                            'price': price,
-                                            'seller': seller,
-                                            'item_id': int(item_id)
-                                        }))
-            if db_resp.status_code == 200:
-                logger.info(f'POST item_price {item_id}: 200')
-            else:
-                logger.error(f'Cound not POST item_price\n{db_resp.text}')
+    if resp.status_code == 200:
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        table = soup.find('div', {'class': 'offer-selection__content-el _active'})
+        dct = table.find('script').text.split('BACKEND.components.sellersOffers=')[-1]
+        dct = json.loads(dct[:-1])
+        price = float(dct['components'][0]['offers'][0]['unitSalePrice'])
+        seller = dct['components'][0]['offers'][0]['name']
+        db_resp = await client.post(config.db_service_api + 'item_price/',
+                                    data=json.dumps({
+                                        'price': price,
+                                        'seller': seller,
+                                        'item_id': int(item_id)
+                                    }))
+        if db_resp.status_code == 200:
+            logger.info(f'POST item_price {item_id}: 200')
         else:
-            logger.error(f'Cound not GET {link}\n{resp.text}')
+            logger.error(f'Cound not POST item_price\n{db_resp.text}')
+    else:
+        logger.error(f'Cound not GET {link}\n{resp.text}')
 
 
 async def parse_title_desc(url):
     id, desc, title = None, None, None
     try:
-        with httpx.AsyncClient() as s:
-            resp = await s.get(url, headers=config.kaspi_headers)
+        with httpx.Client() as s:
+            resp = s.get(url, headers=config.kaspi_headers)
     except Exception as e:
         logger.error(f"Could not to load {url}\n{e}")
         return id, title, desc
