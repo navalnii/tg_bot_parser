@@ -65,8 +65,11 @@ async def send_welcome(message: types.Message):
         "Barlyq ónimder tizimin kórý úshin /get_items jazyńyz.\n"
         "Bot toqtatý úshin /unsubscribe jazyńyz.\n",
         disable_web_page_preview=True)
-    return await message.answer("Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
-
+    await message.answer_photo(photo=open(config.telegram_img_path + '1_entry.jpeg', 'rb'))
+    await message.answer_photo(photo=open(config.telegram_img_path + '2_entry.jpeg', 'rb'))
+    await message.answer_photo(photo=open(config.telegram_img_path + '3_entry.jpeg', 'rb'))
+    await message.answer("Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
+    return
 
 
 @dp.message_handler(commands=['get_items'])
@@ -80,6 +83,7 @@ async def get_items(message: types.Message):
         return await message.answer(ans, disable_web_page_preview=True)
     else:
         logger.error(f'Could not GET items_user/?user_id={message.from_user.id}\n{resp.text}')
+        return
 
 
 @dp.message_handler(commands=['unsubscribe'])
@@ -92,10 +96,11 @@ async def unsubscribe(message: types.Message):
                              'is_active': False
                          }))
     if resp.status_code == 200:
-        await message.answer(text=f"")
+        await message.answer(text=f"Bot sátti toqtatyldy")
         logger.info(f'User {message.from_user.username} unsubscribeted')
     else:
         logger.error(f'Could not POST user {message.from_user.id}\n{resp.text}')
+    return
 
 
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
@@ -116,6 +121,7 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
         await call.message.delete()
     else:
         logger.error(f'Could not POST user {call.from_user.id}\n{resp.text}')
+    return
 
 
 # filter url from messages
@@ -123,6 +129,10 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
 async def get_urls(message: types.Message):
     url = urlparse(message.text)
     id, title, desc = await parser.parse_title_desc(message.text)
+    if not re.findall('\d{7}', url.query):
+        await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
+        await message.answer_photo(photo=open(config.telegram_img_path + '1_faq.jpeg', 'rb'))
+        return
     if url.netloc == 'kaspi.kz':
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},
@@ -136,12 +146,12 @@ async def get_urls(message: types.Message):
                              }))
         if resp.status_code == 200:
             logger.info(f'User {message.from_user.username} added item {title}')
-            await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
+            return await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
 
         elif resp.status_code == 406:
-            await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
+            return await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
     else:
-        await message.reply(f"Alynǵan url anyqtalmady.")
+        return await message.reply(f"Alynǵan url anyqtalmady.")
 
 
 async def send_notification():
@@ -163,6 +173,7 @@ async def send_notification():
             await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
     else:
         logger.error(f'Could not GET users\n{users_list.text}')
+    return
 
 
 async def on_startup(_):

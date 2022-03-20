@@ -77,10 +77,10 @@ async def main(data: dict):
 
 
 if __name__ == "__main__":
-    # a, b, c = parse_title_desc('https://kadspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845/?c=710000000')
-    start_time = time.monotonic()
-    asyncio.run(main(items()))
-    print(f"Time Taken:{time.monotonic() - start_time}")
+    parse_title_desc('https://kadspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845')
+    # start_time = time.monotonic()
+    # asyncio.run(main(items()))
+    # print(f"Time Taken:{time.monotonic() - start_time}")
 
 
 

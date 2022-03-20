@@ -18,4 +18,5 @@ kaspi_headers = {
 WEBHOOK_SSL_CERT = "/etc/ssl/certs/apache-selfsigned.crt"
 WEBHOOK_SSL_PRIV = "/etc/ssl/private/apache-selfsigned.key"
 
+telegram_img_path = '/home/damir/Downloads/'
 
