@@ -25,8 +25,10 @@ def create_user(db: Session, user: user_schema.UserCreate):
 
 def update_user(db: Session, user: user_schema.UserCreate):
     db_user = db.query(models.User).filter(models.User.id == user.id).first()
-    db_user.is_active = user.is_active
-    db_user.discount_perc = user.discount_perc
+    if user.is_active is not None:
+        db_user.is_active = user.is_active
+    if user.discount_perc is not None:
+        db_user.discount_perc = user.discount_perc
     db.commit()
     db.refresh(db_user)
     return db_user

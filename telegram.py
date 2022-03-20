@@ -2,6 +2,7 @@ import os
 import re
 import ssl
 import json
+from datetime import datetime
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 import logger
@@ -65,6 +66,7 @@ async def send_welcome(message: types.Message):
 async def get_items(message: types.Message):
     resp = requests.get(config.db_service_api + f'items_user/?user_id={message.from_user.id}')
     if resp.status_code == 200:
+        logger.info(f'GET items_user/?user_id={message.from_user.id}: 200')
         ans = f'Qazirgi ýaqytta sizde kelesi ónimder bar:\n\n'
         for ind, item in enumerate(json.loads(resp.content)['results']):
             ans += f'<b>{ind+1}. {item["title"]}</b>\n<u>{item["url"]}</u>\n\n'
@@ -75,7 +77,18 @@ async def get_items(message: types.Message):
 
 @dp.message_handler(commands=['unsubscribe'])
 async def unsubscribe(message: types.Message):
-    pass
+    resp = requests.post(config.db_service_api + 'user/',
+                         data=json.dumps({
+                             'id': message.from_user.id,
+                             'chat_id': message.message.chat.id,
+                             'username': message.from_user.username,
+                             'is_active': False
+                         }))
+    if resp.status_code == 200:
+        await message.answer(text=f"", show_alert=True)
+        logger.info(f'User {message.from_user.username} unsubscribeted')
+    else:
+        logger.error(f'Could not POST user {message.from_user.id}\n{resp.text}')
 
 
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
@@ -90,6 +103,7 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
                              'discount_perc': percent
                          }))
     if resp.status_code == 200:
+        logger.info(f'User {call.from_user.username} started bot')
         await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
         await call.message.delete()
     else:
@@ -113,30 +127,34 @@ async def get_urls(message: types.Message):
                                  'url': message.text
                              }))
         if resp.status_code == 200:
+            logger.info(f'User {message.from_user.username} added item {title}')
             await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
 
         elif resp.status_code == 406:
             await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
     else:
-        await message.reply(f"Alynǵan sylcacy anyqtalmady.")
+        await message.reply(f"Alynǵan url anyqtalmady.")
 
 
 async def send_notification():
     with httpx.Client() as client:
         users_list = client.get(config.db_service_api + 'users')
+    if users_list.status_code == 200:
         users_list = json.loads(users_list.content)
-    for user in users_list['results']:
-        text = 'Kelesi jeńildikter tabyldy:\n\n'
-        async with httpx.AsyncClient() as client:
-            user_items = await client.get(config.db_service_api + f'get_item_price/?user_id={user["id"]}')
-            user_items = json.loads(user_items.content)
-        for ind, user_item in enumerate(user_items):
-            text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
-            text += f'baǵasy - {user_item["price"][0]["price"]} - {user_item["price"][0]["seller"]}     '
-            text += f'(eski - {user_item["price"][1]["price"]} - {user_item["price"][1]["seller"]})\n'
-            text += f'{user_item["item"]["url"]}\n\n'
-
-        await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
+        for user in users_list['results']:
+            text = 'Kelesi jeńildikter tabyldy:\n\n'
+            async with httpx.AsyncClient() as client:
+                user_items = await client.get(config.db_service_api + f'get_item_price/?user_id={user["id"]}')
+                user_items = json.loads(user_items.content)
+            for ind, user_item in enumerate(user_items):
+                text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
+                text += f'baǵasy - {user_item["price"][0]["price"]} - {user_item["price"][0]["seller"]}     '
+                text += f'(eski - {user_item["price"][1]["price"]} - {user_item["price"][1]["seller"]})\n'
+                text += f'{user_item["item"]["url"]}\n\n'
+            logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+            await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
+    else:
+        logger.error(f'Could not GET users\n{users_list.text}')
 
 
 async def on_startup(_):
@@ -145,7 +163,7 @@ async def on_startup(_):
 
 
 async def scheduler():
-    aioschedule.every().day.at("23:05").do(send_notification)
+    aioschedule.every().day.at("09:00").do(send_notification)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)

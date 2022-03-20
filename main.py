@@ -29,9 +29,9 @@ def get_users(db: Session = Depends(get_db)) -> object:
     return {'results': list(user_crud.get_users(db))}
 
 
-@app.get("/user_info/", response_model=user_schema.User)
-def user_info(user_id: int, db: Session = Depends(get_db)) -> object:
-    return user_crud.get_user(db, user_id)
+# @app.get("/user_info/", response_model=user_schema.User)
+# def user_info(user_id: int, db: Session = Depends(get_db)) -> object:
+#     return user_crud.get_user(db, user_id)
 
 
 @app.post("/user/", response_model=user_schema.User)
@@ -55,12 +55,12 @@ def get_urls(db: Session = Depends(get_db)) -> object:
     return {'results': list(res)}
 
 
-@app.post("/item/", response_model=item_schema.Item)
-def create_item(item: item_schema.ItemCreate, db: Session = Depends(get_db)):
-    db_item = item_crud.get_item(db, item_id=item.id)
-    if db_item:
-        raise HTTPException(status_code=400, detail="Item already existed")
-    return item_crud.create_item(db=db, item=item)
+# @app.post("/item/", response_model=item_schema.Item)
+# def create_item(item: item_schema.ItemCreate, db: Session = Depends(get_db)):
+#     db_item = item_crud.get_item(db, item_id=item.id)
+#     if db_item:
+#         raise HTTPException(status_code=400, detail="Item already existed")
+#     return item_crud.create_item(db=db, item=item)
 
 
 @app.post("/subs/", response_model=subscription_schema.Subscription)
