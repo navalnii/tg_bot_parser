@@ -15,6 +15,7 @@ uvicorn = "^0.17.5"
 psycopg2-binary = "^2.9.3"
 httpx = "^0.22.0"
 beautifulsoup4 = "^4.10.0"
+aioschedule = "^0.5.2"
 
 [tool.poetry.dev-dependencies]
 

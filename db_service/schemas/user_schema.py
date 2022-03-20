@@ -37,5 +37,7 @@ class UserGetItems(BaseModel):
     results: Sequence[Item]
 
 
+class UsersList(BaseModel):
+    results: List[User]
 
 

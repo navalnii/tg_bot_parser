@@ -24,6 +24,11 @@ def get_db():
         db.close()
 
 
+@app.get("/users", response_model=user_schema.UsersList)
+def get_users(db: Session = Depends(get_db)) -> object:
+    return {'results': list(user_crud.get_users(db))}
+
+
 @app.get("/user_info/", response_model=user_schema.User)
 def user_info(user_id: int, db: Session = Depends(get_db)) -> object:
     return user_crud.get_user(db, user_id)
@@ -88,7 +93,7 @@ def get_item_price(user_id: int, db: Session = Depends(get_db)):
         # 2 - limit sql for calculate discount between prev and curr prices
         prices = price_crud.get_item_prices(db, item.id, 2)
         diff_percent = (prices[1].price - prices[0].price) / prices[0].price
-        if user_info.discount_perc == 'under_15' and diff_percent < 0.15:
+        if user_info.discount_perc == 'under_15' and 0 < diff_percent < 0.15:
             results.append({'item': item, 'price': prices})
         elif user_info.discount_perc == 'from_15_to_25' and 0.15 < diff_percent < 0.25:
             results.append({'item': item, 'price': prices})

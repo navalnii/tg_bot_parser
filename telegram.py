@@ -17,7 +17,7 @@ from aiogram.dispatcher.webhook import SendMessage
 from aiogram.utils.executor import start_webhook
 from aiogram.utils.callback_data import CallbackData
 import config
-
+import parser
 
 load_dotenv()
 
@@ -34,14 +34,11 @@ WEBAPP_PORT = 3001
 
 logger = logger.logger_init('telegram')
 
-
 bot = Bot(token=API_TOKEN, parse_mode=types.ParseMode.HTML)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
 callback_percent = CallbackData("name", "percent")
-
-
 
 
 def reply_keyboard():
@@ -60,18 +57,20 @@ async def send_welcome(message: types.Message):
     """
     This handler will be called when user sends `/start` or `/help` command
     """
-    return await message.answer("Sálem.\nBul marketpleıs jeńildikterdi tekserý bot.\n"
-                                "Bastaý úshin maǵan qandaı jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
+    return await message.answer("Sálem!\nBul marketpleıs jeńildikterdi tekserý bot.\n"
+                                "Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
 
 
 @dp.message_handler(commands=['get_items'])
 async def get_items(message: types.Message):
-    resp = requests.get(config.db_service_api + f'items/?user_id={message.from_user.id}')
+    resp = requests.get(config.db_service_api + f'items_user/?user_id={message.from_user.id}')
     if resp.status_code == 200:
         ans = f'Qazirgi ýaqytta sizde kelesi ónimder bar:\n\n'
         for ind, item in enumerate(json.loads(resp.content)['results']):
-            ans += f'<b>{ind+1}. {item["title"]}</b>\nlink: <u>{item["url"]}</u>\n\n'
-        return await message.answer(ans, disable_web_page_preview=False)
+            ans += f'<b>{ind+1}. {item["title"]}</b>\n<u>{item["url"]}</u>\n\n'
+        return await message.answer(ans, disable_web_page_preview=True)
+    else:
+        logger.error(f'Could not GET items_user/?user_id={message.from_user.id}\n{resp.text}')
 
 
 @dp.message_handler(commands=['unsubscribe'])
@@ -94,22 +93,21 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
         await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.", show_alert=True)
         await call.message.delete()
     else:
-        print(resp.text)
+        logger.error(f'Could not POST user {call.from_user.id}\n{resp.text}')
 
 
 # filter url from messages
 @dp.message_handler(regexp='((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*')
 async def get_urls(message: types.Message):
     url = urlparse(message.text)
+    id, title, desc = await parser.parse_title_desc(url)
     if url.netloc == 'kaspi.kz':
-        title = url.path.split('/')[-2]
-        id = title.split('-')[-1]
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},
                              data=json.dumps({
                                  'id': id,
                                  'title': title,
-                                 'description': '',
+                                 'description': desc,
                                  'source': url.netloc,
                                  'cato_id': re.findall('\d{7}', url.query)[0],
                                  'url': message.text
@@ -119,20 +117,26 @@ async def get_urls(message: types.Message):
 
         elif resp.status_code == 406:
             await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
-            print(resp.text)
+    else:
+        await message.reply(f"Alynǵan sylcacy anyqtalmady.")
 
 
-async def send_notification(message: types.Message):
-    async with httpx.AsyncClient() as client:
-        user_info = await client.get(config.db_service_api + 'user_info')
-    if user_info['discount_perc'] == 'under_15':
+async def send_notification():
+    with httpx.Client() as client:
+        users_list = client.get(config.db_service_api + 'users')
+        users_list = json.loads(users_list.content)
+    for user in users_list['results']:
+        text = 'Kelesi jeńildikter tabyldy:\n\n'
+        async with httpx.AsyncClient() as client:
+            user_items = await client.get(config.db_service_api + f'get_item_price/?user_id={user["id"]}')
+            user_items = json.loads(user_items.content)
+        for ind, user_item in enumerate(user_items):
+            text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
+            text += f'baǵasy - {user_item["price"][0]["price"]} - {user_item["price"][0]["seller"]}     '
+            text += f'(eski - {user_item["price"][1]["price"]} - {user_item["price"][1]["seller"]})\n'
+            text += f'{user_item["item"]["url"]}\n\n'
 
-        pass
-    elif user_info['discount_perc'] == 'from_15_to_25':
-        pass
-    elif user_info['discount_perc'] == 'upper_25':
-        pass
-
+        await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
 
 
 async def on_startup(_):
@@ -141,7 +145,7 @@ async def on_startup(_):
 
 
 async def scheduler():
-    aioschedule.every().day.at("12:00").do(send_notification)
+    aioschedule.every().day.at("23:05").do(send_notification)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
