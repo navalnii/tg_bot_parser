@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 
 import config
 import json
@@ -21,25 +21,28 @@ def items():
 
 
 async def kaspi_price_parse(link: str, item_id: int):
-    with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as client:
         resp = await client.get(link, headers=config.kaspi_headers)
     if resp.status_code == 200:
         soup = BeautifulSoup(resp.content, 'html.parser')
         table = soup.find('div', {'class': 'offer-selection__content-el _active'})
         dct = table.find('script').text.split('BACKEND.components.sellersOffers=')[-1]
         dct = json.loads(dct[:-1])
-        price = float(dct['components'][0]['offers'][0]['unitSalePrice'])
-        seller = dct['components'][0]['offers'][0]['name']
-        db_resp = await client.post(config.db_service_api + 'item_price/',
-                                    data=json.dumps({
-                                        'price': price,
-                                        'seller': seller,
-                                        'item_id': int(item_id)
-                                    }))
-        if db_resp.status_code == 200:
-            logger.info(f'POST item_price {item_id}: 200')
-        else:
-            logger.error(f'Cound not POST item_price\n{db_resp.text}')
+        try:
+            price = float(dct['components'][0]['offers'][0]['unitSalePrice'])
+            seller = dct['components'][0]['offers'][0]['name']
+            db_resp = await client.post(config.db_service_api + 'item_price/',
+                                        data=json.dumps({
+                                            'price': price,
+                                            'seller': seller,
+                                            'item_id': int(item_id)
+                                        }))
+            if db_resp.status_code == 200:
+                logger.info(f'POST item_price {item_id}: 200')
+            else:
+                logger.error(f'Cound not POST item_price\n{db_resp.text}')
+        except Exception as e:
+            logger.error(f'Cound not parser price item {item_id}\n{link}')
     else:
         logger.error(f'Cound not GET {link}\n{resp.text}')
 
@@ -77,10 +80,10 @@ async def main(data: dict):
 
 
 if __name__ == "__main__":
-    parse_title_desc('https://kadspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845')
-    # start_time = time.monotonic()
-    # asyncio.run(main(items()))
-    # print(f"Time Taken:{time.monotonic() - start_time}")
+    # parse_title_desc('https://kadspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845')
+    start_time = time.monotonic()
+    asyncio.run(main(items()))
+    print(f"Time Taken:{time.monotonic() - start_time}")
 
 
 

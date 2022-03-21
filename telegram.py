@@ -129,11 +129,11 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
 async def get_urls(message: types.Message):
     url = urlparse(message.text)
     id, title, desc = await parser.parse_title_desc(message.text)
-    if not re.findall('\d{7}', url.query):
-        await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
-        await message.answer_photo(photo=open(config.telegram_img_path + '1_faq.jpeg', 'rb'))
-        return
     if url.netloc == 'kaspi.kz':
+        if not re.findall('\d{7}', url.query):
+            await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
+            await message.answer_photo(photo=open(config.telegram_img_path + '1_faq.jpeg', 'rb'))
+            return
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},
                              data=json.dumps({
@@ -160,17 +160,22 @@ async def send_notification():
     if users_list.status_code == 200:
         users_list = json.loads(users_list.content)
         for user in users_list['results']:
-            text = 'Kelesi jeńildikter tabyldy:\n\n'
-            async with httpx.AsyncClient() as client:
-                user_items = await client.get(config.db_service_api + f'get_item_price/?user_id={user["id"]}')
-                user_items = json.loads(user_items.content)
-            for ind, user_item in enumerate(user_items):
-                text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
-                text += f'baǵasy - {user_item["price"][0]["price"]} - {user_item["price"][0]["seller"]}     '
-                text += f'(eski - {user_item["price"][1]["price"]} - {user_item["price"][1]["seller"]})\n'
-                text += f'{user_item["item"]["url"]}\n\n'
-            logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-            await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
+            try:
+                text = 'Kelesi jeńildikter tabyldy:\n\n'
+                async with httpx.AsyncClient() as client:
+                    user_items = await client.get(config.db_service_api + f'get_item_price/?user_id={user["id"]}')
+                    user_items = json.loads(user_items.content)
+                for ind, user_item in enumerate(user_items):
+                    text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
+                    text += f'baǵasy - {user_item["price"][0]["price"]} - {user_item["price"][0]["seller"]}     '
+                    text += f'(eski - {user_item["price"][1]["price"]} - {user_item["price"][1]["seller"]})\n'
+                    text += f'{user_item["item"]["url"]}\n\n'
+                if user_items:
+                    logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+                    await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
+            except Exception as e:
+                logger.error(f'Could not send notification {user["id"]}\n{e}')
+                continue
     else:
         logger.error(f'Could not GET users\n{users_list.text}')
     return
@@ -182,7 +187,7 @@ async def on_startup(_):
 
 
 async def scheduler():
-    aioschedule.every().day.at("09:00").do(send_notification)
+    aioschedule.every().day.at("15:15").do(send_notification)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
