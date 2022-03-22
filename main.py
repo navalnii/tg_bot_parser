@@ -99,7 +99,7 @@ def get_item_price(user_id: int, db: Session = Depends(get_db)):
 
 
 # Whitelisted IPs
-WHITELISTED_IPS = ['2.75', '127.0']
+WHITELISTED_IPS = ['2.75', '127.0', '45.129']
 
 
 @app.middleware('http')

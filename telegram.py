@@ -65,11 +65,18 @@ async def send_welcome(message: types.Message):
         "Barlyq ónimder tizimin kórý úshin /get_items jazyńyz.\n"
         "Bot toqtatý úshin /unsubscribe jazyńyz.\n",
         disable_web_page_preview=True)
-    await message.answer_photo(photo=open(config.telegram_img_path + '1_entry.jpeg', 'rb'))
-    await message.answer_photo(photo=open(config.telegram_img_path + '2_entry.jpeg', 'rb'))
-    await message.answer_photo(photo=open(config.telegram_img_path + '3_entry.jpeg', 'rb'))
+    # images = [
+    #     types.input_media.InputMediaPhoto('5d0bbd48-2009-44ba-be37-11a9a889cc6f'),
+    #     types.input_media.InputMediaPhoto('5d0bbd48-2009-44ba-be37-11a9a889cc6f'),
+        # types.input_media.InputMediaPhoto(config.telegram_img_path + '3_entry.jpeg')
+    # ]
+    # message.answer_media_group()
+    # types.input_media_photo.InputMediaPhoto
+    # await message.answer_media_group(media=images)
+    # await message.answer_photo(photo=open(config.telegram_img_path + '1_entry.jpeg', 'rb'))
+    # await message.answer_photo(photo=open(config.telegram_img_path + '2_entry.jpeg', 'rb'))
+    # await message.answer_photo(photo=open(config.telegram_img_path + '3_entry.jpeg', 'rb'))
     await message.answer("Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
-    return
 
 
 @dp.message_handler(commands=['get_items'])
@@ -80,10 +87,9 @@ async def get_items(message: types.Message):
         ans = f'Qazirgi ýaqytta sizde kelesi ónimder bar:\n\n'
         for ind, item in enumerate(json.loads(resp.content)['results']):
             ans += f'<b>{ind+1}. {item["title"]}</b>\n<u>{item["url"]}</u>\n\n'
-        return await message.answer(ans, disable_web_page_preview=True)
+        await message.answer(ans, disable_web_page_preview=True)
     else:
         logger.error(f'Could not GET items_user/?user_id={message.from_user.id}\n{resp.text}')
-        return
 
 
 @dp.message_handler(commands=['unsubscribe'])
@@ -100,7 +106,6 @@ async def unsubscribe(message: types.Message):
         logger.info(f'User {message.from_user.username} unsubscribeted')
     else:
         logger.error(f'Could not POST user {message.from_user.id}\n{resp.text}')
-    return
 
 
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
@@ -121,7 +126,6 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
         await call.message.delete()
     else:
         logger.error(f'Could not POST user {call.from_user.id}\n{resp.text}')
-    return
 
 
 # filter url from messages
@@ -130,10 +134,9 @@ async def get_urls(message: types.Message):
     url = urlparse(message.text)
     id, title, desc = await parser.parse_title_desc(message.text)
     if url.netloc == 'kaspi.kz':
-        if not re.findall('\d{7}', url.query):
+        if not re.findall('\d{9}', url.query):
             await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
             await message.answer_photo(photo=open(config.telegram_img_path + '1_faq.jpeg', 'rb'))
-            return
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},
                              data=json.dumps({
@@ -141,17 +144,17 @@ async def get_urls(message: types.Message):
                                  'title': title,
                                  'description': desc,
                                  'source': url.netloc,
-                                 'cato_id': re.findall('\d{7}', url.query)[0],
+                                 'cato_id': re.findall('\d{9}', url.query)[0],
                                  'url': message.text
                              }))
         if resp.status_code == 200:
             logger.info(f'User {message.from_user.username} added item {title}')
-            return await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
+            await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
 
         elif resp.status_code == 406:
-            return await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
+            await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
     else:
-        return await message.reply(f"Alynǵan url anyqtalmady.")
+        await message.reply(f"Alynǵan url anyqtalmady.")
 
 
 async def send_notification():
