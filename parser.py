@@ -1,8 +1,7 @@
-import aiohttp
-
 import config
 import json
 import httpx
+from datetime import datetime
 from bs4 import BeautifulSoup
 import asyncio
 import logger
@@ -101,10 +100,11 @@ async def main(data: dict):
 
 if __name__ == "__main__":
     # parse_title_desc('https://kadspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845')
-    items_lst = items()
     start_time = time.monotonic()
+    logger.info(f"Parser started at {datetime.now().strftime('%d-%m-%Y %H:%M')}")
+    items_lst = items()
     asyncio.run(main(items_lst))
-    print(f"Time Taken:{time.monotonic() - start_time}")
+    logger.info(f"Parser ended at {datetime.now().strftime('%d-%m-%Y %H:%M')}\nTime taken: {time.monotonic() - start_time}")
 
 
 

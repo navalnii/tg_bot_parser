@@ -65,14 +65,12 @@ async def send_welcome(message: types.Message):
         "Barlyq ónimder tizimin kórý úshin /get_items jazyńyz.\n"
         "Bot toqtatý úshin /unsubscribe jazyńyz.\n",
         disable_web_page_preview=True)
-    # images = [
-    #     types.input_media.InputMediaPhoto('5d0bbd48-2009-44ba-be37-11a9a889cc6f'),
-    #     types.input_media.InputMediaPhoto('5d0bbd48-2009-44ba-be37-11a9a889cc6f'),
-        # types.input_media.InputMediaPhoto(config.telegram_img_path + '3_entry.jpeg')
-    # ]
-    # message.answer_media_group()
-    # types.input_media_photo.InputMediaPhoto
-    # await message.answer_media_group(media=images)
+    images = [
+        types.input_media.InputMediaPhoto('AgACAgIAAxkBAAICamI66ExzmNRLxoERTa_B3Y8AAey2UQACW7gxGzQv2EnTpUIH3y95NwEAAwIAA3MAAyME'),
+        types.input_media.InputMediaPhoto('AgACAgIAAxkBAAICa2I66F3zPqmr6hfogNkbas4Mw5oKAAKYuTEboiTQSeoK-DEc-mQMAQADAgADcwADIwQ'),
+        types.input_media.InputMediaPhoto('AgACAgIAAxkBAAICbGI66HYo4xCQ2aewYoxsirEckoHjAAKZuTEboiTQSaRm4G4o0ZXrAQADAgADcwADIwQ')
+    ]
+    await message.answer_media_group(media=images)
     # await message.answer_photo(photo=open(config.telegram_img_path + '1_entry.jpeg', 'rb'))
     # await message.answer_photo(photo=open(config.telegram_img_path + '2_entry.jpeg', 'rb'))
     # await message.answer_photo(photo=open(config.telegram_img_path + '3_entry.jpeg', 'rb'))
@@ -90,6 +88,17 @@ async def get_items(message: types.Message):
         await message.answer(ans, disable_web_page_preview=True)
     else:
         logger.error(f'Could not GET items_user/?user_id={message.from_user.id}\n{resp.text}')
+
+
+@dp.message_handler(content_types=['photo'])
+async def scan_message(msg: types.Message):
+    for img in msg.photo:
+        document_id = img.file_id
+        file_info = await bot.get_file(document_id)
+        print(f'file_id: {file_info.file_id}')
+        print(f'file_path: {file_info.file_path}')
+        print(f'file_size: {file_info.file_size}')
+        print(f'file_unique_id: {file_info.file_unique_id}')
 
 
 @dp.message_handler(commands=['unsubscribe'])
@@ -136,7 +145,8 @@ async def get_urls(message: types.Message):
     if url.netloc == 'kaspi.kz':
         if not re.findall('\d{9}', url.query):
             await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
-            await message.answer_photo(photo=open(config.telegram_img_path + '1_faq.jpeg', 'rb'))
+            await message.answer_photo('AgACAgIAAxkBAAICbWI66Is_0qQ5JiQO9RwhX6txokQdAAKcuTEboiTQSbaR9Js62MbyAQADAgADcwADIwQ')
+            return
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},
                              data=json.dumps({
@@ -190,7 +200,7 @@ async def on_startup(_):
 
 
 async def scheduler():
-    aioschedule.every().day.at("15:15").do(send_notification)
+    aioschedule.every().day.at("09:00").do(send_notification)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
