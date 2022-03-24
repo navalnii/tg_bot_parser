@@ -88,10 +88,13 @@ def get_item_price(user_id: int, db: Session = Depends(get_db)):
         # 2 - limit sql for calculate discount between prev and curr prices
         prices = price_crud.get_item_prices(db, item.id, 2)
         if prices:
-            diff_percent = (prices[1].price - prices[0].price) / prices[0].price
-            if user_info.discount_perc == 'under_15' and 0 < diff_percent < 0.15:
+            try:
+                diff_percent = (prices[1].price - prices[0].price) / prices[0].price
+            except:
+                continue
+            if user_info.discount_perc == 'under_15' and 0 < diff_percent:
                 results.append({'item': item, 'price': prices})
-            elif user_info.discount_perc == 'from_15_to_25' and 0.15 < diff_percent < 0.25:
+            elif user_info.discount_perc == 'from_15_to_25' and 0.15 < diff_percent:
                 results.append({'item': item, 'price': prices})
             elif user_info.discount_perc == 'upper_25' and 0.25 < diff_percent:
                 results.append({'item': item, 'price': prices})
