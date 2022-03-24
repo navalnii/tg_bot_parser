@@ -66,7 +66,7 @@ async def parse_payloads(item_id: int, cato_id: str, link: str):
             logger.error(f'Cound not POST item_price {item_id}\n{db_resp.text}')
 
 
-async def parse_title_desc(url):
+def parse_title_desc(url):
     id, desc, title = None, None, None
     try:
         with httpx.Client() as s:
@@ -99,7 +99,7 @@ async def main(data: dict):
 
 
 if __name__ == "__main__":
-    # parse_title_desc('https://kadspi.kz/shop/p/apple-macbook-air-13-mgn63-seryi-100797845')
+    # parse_title_desc('https://kaspi.kz/shop/p/apple-iphone-13-128gb-chernyi-102298404/?c=710000000')
     start_time = time.monotonic()
     logger.info(f"Parser started at {datetime.now().strftime('%d-%m-%Y %H:%M')}")
     items_lst = items()
