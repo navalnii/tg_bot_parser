@@ -29,7 +29,7 @@ async def log_response(response):
 
 
 async def parse_payloads(item_id: int, cato_id: str, link: str):
-    price, seler = None, None
+    price, seller = None, None
     async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
         resp_get = await client.get(link, headers=config.kaspi_headers)
         if resp_get.status_code == 200:
