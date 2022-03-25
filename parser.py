@@ -19,8 +19,18 @@ def items():
         logger.error(f'Cound not GET urls\n{resp.text}')
 
 
+async def log_request(request):
+    logger.info(f"Request event hook: {request.method} {request.url} - Waiting for response")
+
+
+async def log_response(response):
+    request = response.request
+    logger.info(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
+
+
 async def parse_payloads(item_id: int, cato_id: str, link: str):
-    async with httpx.AsyncClient() as client:
+    price, seler = None, None
+    async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
         resp_get = await client.get(link, headers=config.kaspi_headers)
         if resp_get.status_code == 200:
             try:
@@ -33,37 +43,32 @@ async def parse_payloads(item_id: int, cato_id: str, link: str):
                 payload['cityId'] = cato_id
                 payload['product'] = dct['card']['promoConditions']
             except Exception as e:
-                logger.error(f"Can't parse {link}\n{e}")
+                logger.error(f"Can't parse GET call {link}\n{e}")
         else:
             logger.error(f'Parser could not GET payload {link}\n{resp_get.text}')
-
-    assert resp_get.status_code == 200
-    async with httpx.AsyncClient() as client:
         resp_post = await client.post(config.url_post + str(item_id), data=json.dumps(payload), headers=config.kaspi_headers)
-        if resp_post.status_code == 200:
-            try:
-                result = json.loads(resp_post.text)
-                price = float(result['offers'][0]['price'])
-                seller = result['offers'][0]['merchantName']
-            except Exception as e:
-                logger.error(f"Can't parse {link}\n{e}")
+        assert resp_post.status_code == 200
+        result = json.loads(resp_post.text)
+        try:
+            price = float(result['offers'][0]['price'])
+            seller = result['offers'][0]['merchantName']
             logger.info(f"Parsing success {price, seller, link}")
-        else:
-            logger.error(f'Parser could not POST price {link}\n{resp_post.text}')
-
+        except Exception as e:
+            logger.error(f"Can't parse POST call {link}\n{e}")
     assert resp_post.status_code == 200
-    async with httpx.AsyncClient() as client:
-        db_resp = await client.post(config.db_service_api + 'item_price/',
-                                    data=json.dumps({
-                                        'price': price,
-                                        'seller': seller,
-                                        'item_id': int(item_id)
-                                    }))
-        if db_resp.status_code == 200:
-            logger.info(f'POST item_price {item_id}: 200')
-            return
-        else:
-            logger.error(f'Cound not POST item_price {item_id}\n{db_resp.text}')
+    if price and seller:
+        async with httpx.AsyncClient() as client:
+            db_resp = await client.post(config.db_service_api + 'item_price/',
+                                        data=json.dumps({
+                                            'price': price,
+                                            'seller': seller,
+                                            'item_id': int(item_id)
+                                        }))
+            if db_resp.status_code == 200:
+                logger.info(f'db_service POST item_price {item_id}: 200')
+                return
+            else:
+                logger.error(f'Cound not db_service POST item_price {item_id}\n{db_resp.text}')
 
 
 def parse_title_desc(url):
