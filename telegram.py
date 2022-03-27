@@ -145,12 +145,11 @@ async def get_urls(message: types.Message):
         cato_id = re.findall('\d{9}', url.query)
         if not cato_id:
             await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
-            await message.answer_photo('AgACAgIAAxkBAAICbWI66Is_0qQ5JiQO9RwhX6txokQdAAKcuTEboiTQSbaR9Js62MbyAQADAgADcwADIwQ')
-            return
-        id, title, desc = parser.parse_title_desc(message.text)
-        resp = requests.post(config.db_service_api + 'subs/',
-                             params={'user_id': message.from_user.id},
-                             data=json.dumps({
+            return await message.answer_photo('AgACAgIAAxkBAAICbWI66Is_0qQ5JiQO9RwhX6txokQdAAKcuTEboiTQSbaR9Js62MbyAQADAgADcwADIwQ')
+        id, title, desc = await parser.parse_kaspi_title_desc(message.text)
+        db_resp = requests.post(config.db_service_api + 'subs/',
+                                params={'user_id': message.from_user.id},
+                                data=json.dumps({
                                  'id': id,
                                  'title': title,
                                  'description': desc,
@@ -158,17 +157,18 @@ async def get_urls(message: types.Message):
                                  'cato_id': cato_id[0],
                                  'url': message.text
                              }))
-        if resp.status_code == 200:
+        if db_resp.status_code == 200:
             logger.info(f'User {message.from_user.username} added item {title}')
-            await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
-        elif resp.status_code == 208:
+            return await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
+        elif db_resp.status_code == 208:
             logger.info(f'User {message.from_user.username} already added item {title}')
-            await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
+            return await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
         else:
-            logger.error(f'Cant POST {resp.status_code}\n{resp.text}')
-            await message.reply(f"URL tanylmady, ony durys engizińiz.")
+            logger.error(f'Cant POST {db_resp.status_code}\n{db_resp.text}')
+            return await message.reply(f"URL tanylmady, ony durys engizińiz.")
     else:
-        await message.reply(f"Alynǵan url anyqtalmady.")
+        logger.info(f'User {message.from_user.username} added unknown item {url}')
+        return await message.reply(f"Alynǵan url anyqtalmady.")
 
 
 async def send_notification():

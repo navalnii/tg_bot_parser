@@ -28,9 +28,10 @@ async def log_response(response):
     logger.info(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
 
 
-async def parse_payloads(item_id: int, cato_id: str, link: str):
+async def parse_kaspi_price(item_id: int, cato_id: str, link: str):
     price, seller = None, None
-    async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
+    async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]},
+                                 timeout=60.0) as client:
         resp_get = await client.get(link, headers=config.kaspi_headers)
         assert resp_get.status_code == 200
         try:
@@ -42,41 +43,37 @@ async def parse_payloads(item_id: int, cato_id: str, link: str):
             payload['id'] = item_id
             payload['cityId'] = cato_id
             payload['product'] = dct['card']['promoConditions']
-        except Exception as e:
-            logger.error(f"Can't parse GET call {link}\n{e}")
-
-        resp_post = await client.post(config.url_post + str(item_id), data=json.dumps(payload), headers=config.kaspi_headers)
+        except:
+            logger.exception(f"Can't parse GET call {link}")
+        resp_post = await client.post(config.url_post + str(item_id),
+                                      data=json.dumps(payload),
+                                      headers=config.kaspi_headers)
         assert resp_post.status_code == 200
         result = json.loads(resp_post.text)
         try:
             price = float(result['offers'][0]['price'])
             seller = result['offers'][0]['merchantName']
             logger.info(f"Parsing success {price, seller, link}")
-        except Exception as e:
-            logger.error(f"Can't parse POST call {link}\n{e}")
-    assert resp_post.status_code == 200
+        except:
+            logger.exception(f"Can't parse POST call {link}")
     if price and seller:
         async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
-            db_resp = await client.post(config.db_service_api + 'item_price/',
-                                        data=json.dumps({
-                                            'price': price,
-                                            'seller': seller,
-                                            'item_id': int(item_id)
-                                        }))
-            assert db_resp.status_code == 200
-            # logger.info(f'db_service POST item_price {item_id}: 200')
-            return
+            resp_db = await client.post(config.db_service_api + 'item_price/',
+                                     data=json.dumps({
+                                         'price': price,
+                                         'seller': seller,
+                                         'item_id': int(item_id)
+                                     }))
+            if resp_db.status_code == 200:
+                logger.info(f'Successful inserted into db {item_id} {price}')
+            else:
+                logger.error(f'Failed to insert into db {item_id}', exc_info=True)
 
 
-def parse_title_desc(url):
+async def parse_kaspi_title_desc(url):
     id, desc, title = None, None, None
-    try:
-        with httpx.Client() as s:
-            resp = s.get(url, headers=config.kaspi_headers)
-    except Exception as e:
-        logger.error(f"Could not to load {url}\n{e}")
-        return id, title, desc
-
+    with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as s:
+        resp = await s.get(url, headers=config.kaspi_headers)
     if resp.status_code == 200:
         soup = BeautifulSoup(resp.content, 'html.parser')
         try:
@@ -86,8 +83,10 @@ def parse_title_desc(url):
             dct = json.loads(dct[:-1])
             title = dct['card']['title']
             id = dct['card']['id']
-        except Exception as e:
-            logger.error(f"Could not to parser title from {url}\n{e}")
+        except:
+            logger.exception(f'Could not to parser title from {url}')
+    else:
+        logger.error(f'Could not to load {url}', exc_info=True)
     return id, title, desc
 
 
@@ -95,7 +94,7 @@ async def main(data: dict):
     tasks = []
     for item in data:
         if item['source'] == 'kaspi.kz':
-            tasks.append(parse_payloads(item['id'], item['cato_id'], item['url']))
+            tasks.append(parse_kaspi_price(item['id'], item['cato_id'], item['url']))
     await asyncio.gather(*tasks)
 
 
@@ -104,7 +103,7 @@ if __name__ == "__main__":
     start_time = time.monotonic()
     logger.info(f"\n\nParser started at {datetime.now().strftime('%d-%m-%Y %H:%M')}")
     items_lst = items()
-    asyncio.run(main(items_lst))
+    asyncio.run(main(items_lst[7:11]))
     logger.info(f"Parser ended at {datetime.now().strftime('%d-%m-%Y %H:%M')}\nTime taken: {time.monotonic() - start_time}\n")
 
 
