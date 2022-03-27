@@ -59,11 +59,11 @@ async def parse_kaspi_price(item_id: int, cato_id: str, link: str):
     if price and seller:
         async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
             resp_db = await client.post(config.db_service_api + 'item_price/',
-                                     data=json.dumps({
-                                         'price': price,
-                                         'seller': seller,
-                                         'item_id': int(item_id)
-                                     }))
+                                        data=json.dumps({
+                                            'price': price,
+                                            'seller': seller,
+                                            'item_id': int(item_id)
+                                        }))
             if resp_db.status_code == 200:
                 logger.info(f'Successful inserted into db {item_id} {price}')
             else:
@@ -72,7 +72,7 @@ async def parse_kaspi_price(item_id: int, cato_id: str, link: str):
 
 async def parse_kaspi_title_desc(url):
     id, desc, title = None, None, None
-    with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as s:
+    async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}, timeout=60.0) as s:
         resp = await s.get(url, headers=config.kaspi_headers)
     if resp.status_code == 200:
         soup = BeautifulSoup(resp.content, 'html.parser')
