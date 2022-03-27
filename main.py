@@ -65,7 +65,7 @@ def create_subs(item: item_schema.ItemCreate, user_id: int, db: Session = Depend
     if item_db and user_db:
         subs_db = subscription_crud.get_subs(db, item_id=item.id, user_id=user_id)
         if subs_db:
-            raise HTTPException(status_code=406, detail="Item-User already existed")
+            raise HTTPException(status_code=208, detail="Item-User already existed")
         else:
             return subscription_crud.create_subscription(db, user_id=user_id, item_id=item.id)
     elif not item_db and user_db:
@@ -90,7 +90,8 @@ def get_item_price(user_id: int, db: Session = Depends(get_db)):
         if prices:
             try:
                 diff_percent = (prices[1].price - prices[0].price) / prices[0].price
-            except:
+            except IndexError:
+                logger.info(f'Could not diff prices {item}')
                 continue
             if user_info.discount_perc == 'under_15' and 0 < diff_percent:
                 results.append({'item': item, 'price': prices})
@@ -102,12 +103,12 @@ def get_item_price(user_id: int, db: Session = Depends(get_db)):
 
 
 # Whitelisted IPs
-WHITELISTED_IPS = ['2.75', '127.0', '45.129']
+WHITELISTED_IPS = ['2.75.48.44', '127.0.0.1', '45.129.0.139']
 
 
 @app.middleware('http')
 async def validate_ip(request: Request, call_next):
-    ip = '.'.join(str(request.client.host).split('.')[:2])
+    ip = str(request.client.host)
     if ip not in WHITELISTED_IPS:
         data = {
             'message': f'IP {ip} is not allowed to access this resource.'

@@ -32,20 +32,19 @@ async def parse_payloads(item_id: int, cato_id: str, link: str):
     price, seller = None, None
     async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
         resp_get = await client.get(link, headers=config.kaspi_headers)
-        if resp_get.status_code == 200:
-            try:
-                soup = BeautifulSoup(resp_get.content, 'html.parser')
-                table_payload = soup.find('div', {'class': 'mount-item-teaser _skeleton'}).find_next()
-                dct = table_payload.text.split('BACKEND.components.item=')[-1]
-                dct = json.loads(dct[:-1])
-                payload = config.kaspi_payload
-                payload['id'] = item_id
-                payload['cityId'] = cato_id
-                payload['product'] = dct['card']['promoConditions']
-            except Exception as e:
-                logger.error(f"Can't parse GET call {link}\n{e}")
-        else:
-            logger.error(f'Parser could not GET payload {link}\n{resp_get.text}')
+        assert resp_get.status_code == 200
+        try:
+            soup = BeautifulSoup(resp_get.content, 'html.parser')
+            table_payload = soup.find('div', {'class': 'mount-item-teaser _skeleton'}).find_next()
+            dct = table_payload.text.split('BACKEND.components.item=')[-1]
+            dct = json.loads(dct[:-1])
+            payload = config.kaspi_payload
+            payload['id'] = item_id
+            payload['cityId'] = cato_id
+            payload['product'] = dct['card']['promoConditions']
+        except Exception as e:
+            logger.error(f"Can't parse GET call {link}\n{e}")
+
         resp_post = await client.post(config.url_post + str(item_id), data=json.dumps(payload), headers=config.kaspi_headers)
         assert resp_post.status_code == 200
         result = json.loads(resp_post.text)
@@ -57,18 +56,16 @@ async def parse_payloads(item_id: int, cato_id: str, link: str):
             logger.error(f"Can't parse POST call {link}\n{e}")
     assert resp_post.status_code == 200
     if price and seller:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(event_hooks={'request': [log_request], 'response': [log_response]}) as client:
             db_resp = await client.post(config.db_service_api + 'item_price/',
                                         data=json.dumps({
                                             'price': price,
                                             'seller': seller,
                                             'item_id': int(item_id)
                                         }))
-            if db_resp.status_code == 200:
-                logger.info(f'db_service POST item_price {item_id}: 200')
-                return
-            else:
-                logger.error(f'Cound not db_service POST item_price {item_id}\n{db_resp.text}')
+            assert db_resp.status_code == 200
+            # logger.info(f'db_service POST item_price {item_id}: 200')
+            return
 
 
 def parse_title_desc(url):
@@ -102,14 +99,13 @@ async def main(data: dict):
     await asyncio.gather(*tasks)
 
 
-
 if __name__ == "__main__":
     # parse_title_desc('https://kaspi.kz/shop/p/apple-iphone-13-128gb-chernyi-102298404/?c=710000000')
     start_time = time.monotonic()
-    logger.info(f"Parser started at {datetime.now().strftime('%d-%m-%Y %H:%M')}")
+    logger.info(f"\n\nParser started at {datetime.now().strftime('%d-%m-%Y %H:%M')}")
     items_lst = items()
     asyncio.run(main(items_lst))
-    logger.info(f"Parser ended at {datetime.now().strftime('%d-%m-%Y %H:%M')}\nTime taken: {time.monotonic() - start_time}")
+    logger.info(f"Parser ended at {datetime.now().strftime('%d-%m-%Y %H:%M')}\nTime taken: {time.monotonic() - start_time}\n")
 
 
 

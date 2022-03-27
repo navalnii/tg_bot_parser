@@ -147,7 +147,7 @@ async def get_urls(message: types.Message):
             await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
             await message.answer_photo('AgACAgIAAxkBAAICbWI66Is_0qQ5JiQO9RwhX6txokQdAAKcuTEboiTQSbaR9Js62MbyAQADAgADcwADIwQ')
             return
-        id, title, desc = await parser.parse_title_desc(message.text)
+        id, title, desc = parser.parse_title_desc(message.text)
         resp = requests.post(config.db_service_api + 'subs/',
                              params={'user_id': message.from_user.id},
                              data=json.dumps({
@@ -155,14 +155,18 @@ async def get_urls(message: types.Message):
                                  'title': title,
                                  'description': desc,
                                  'source': url.netloc,
-                                 'cato_id': cato_id,
+                                 'cato_id': cato_id[0],
                                  'url': message.text
                              }))
         if resp.status_code == 200:
             logger.info(f'User {message.from_user.username} added item {title}')
             await message.reply(f"Siz ónimdi parserge sátti qostyńyz")
-        elif resp.status_code == 406:
+        elif resp.status_code == 208:
+            logger.info(f'User {message.from_user.username} already added item {title}')
             await message.reply(f"Ónim qazirdiń ózinde parserde bar. \nBúkil tizimdi kórý úshin /get_items")
+        else:
+            logger.error(f'Cant POST {resp.status_code}\n{resp.text}')
+            await message.reply(f"URL tanylmady, ony durys engizińiz.")
     else:
         await message.reply(f"Alynǵan url anyqtalmady.")
 
