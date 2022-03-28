@@ -184,8 +184,8 @@ async def send_notification():
                     text = 'Kelesi jeńildikter tabyldy:\n\n'
                     for ind, user_item in enumerate(user_items):
                         text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
-                        text += f'baǵasy: <b>{user_item["price"][0]["price"]}</b>; satýshy: <b>{user_item["price"][0]["seller"]}</b>    '
-                        text += f'(eski: <b>{user_item["price"][1]["price"]}</b>; satýshy: <b>{user_item["price"][1]["seller"]}</b>)\n'
+                        text += f'baǵasy:  <b>{user_item["price"][0]["price"]}</b>;   satýshy:  <b>{user_item["price"][0]["seller"]}</b> \n'
+                        text += f' (eski:  <b>{user_item["price"][1]["price"]}</b>;   satýshy:  <b>{user_item["price"][1]["seller"]}</b>)\n'
                         text += f'{user_item["item"]["url"]}\n\n'
                     if user_items:
                         logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
