@@ -66,28 +66,26 @@ async def send_welcome(message: types.Message):
         "Bot toqtatý úshin /unsubscribe jazyńyz.\n",
         disable_web_page_preview=True)
     images = [
-        types.input_media.InputMediaPhoto('AgACAgIAAxkBAAICamI66ExzmNRLxoERTa_B3Y8AAey2UQACW7gxGzQv2EnTpUIH3y95NwEAAwIAA3MAAyME'),
-        types.input_media.InputMediaPhoto('AgACAgIAAxkBAAICa2I66F3zPqmr6hfogNkbas4Mw5oKAAKYuTEboiTQSeoK-DEc-mQMAQADAgADcwADIwQ'),
-        types.input_media.InputMediaPhoto('AgACAgIAAxkBAAICbGI66HYo4xCQ2aewYoxsirEckoHjAAKZuTEboiTQSaRm4G4o0ZXrAQADAgADcwADIwQ')
+        types.input_media.InputMediaPhoto(config.telegram_images['faq_1']),
+        types.input_media.InputMediaPhoto(config.telegram_images['faq_2']),
+        types.input_media.InputMediaPhoto(config.telegram_images['faq_3'])
     ]
     await message.answer_media_group(media=images)
-    # await message.answer_photo(photo=open(config.telegram_img_path + '1_entry.jpeg', 'rb'))
-    # await message.answer_photo(photo=open(config.telegram_img_path + '2_entry.jpeg', 'rb'))
-    # await message.answer_photo(photo=open(config.telegram_img_path + '3_entry.jpeg', 'rb'))
-    await message.answer("Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
+    return await message.answer("Bastaý úshin jeńildik mólsherin tańdańyz.", reply_markup=reply_keyboard())
 
 
 @dp.message_handler(commands=['get_items'])
 async def get_items(message: types.Message):
     resp = requests.get(config.db_service_api + f'items_user/?user_id={message.from_user.id}')
     if resp.status_code == 200:
-        logger.info(f'GET items_user/?user_id={message.from_user.id}: 200')
         ans = f'Qazirgi ýaqytta sizde kelesi ónimder bar:\n\n'
         for ind, item in enumerate(json.loads(resp.content)['results']):
             ans += f'<b>{ind+1}. {item["title"]}</b>\n<u>{item["url"]}</u>\n\n'
-        await message.answer(ans, disable_web_page_preview=True)
+        logger.info(f'GET items_user/?user_id={message.from_user.id}: 200')
+        return await message.answer(ans, disable_web_page_preview=True)
     else:
         logger.error(f'Could not GET items_user/?user_id={message.from_user.id}\n{resp.text}')
+        return
 
 
 @dp.message_handler(content_types=['photo'])
@@ -111,10 +109,11 @@ async def unsubscribe(message: types.Message):
                              'is_active': False
                          }))
     if resp.status_code == 200:
-        await message.answer(text=f"Bot sátti toqtatyldy")
         logger.info(f'User {message.from_user.username} unsubscribeted')
+        return await message.answer(text=f"Bot sátti toqtatyldy")
     else:
         logger.error(f'Could not POST user {message.from_user.id}\n{resp.text}')
+        return
 
 
 @dp.callback_query_handler(callback_percent.filter(percent=["under_15", "from_15_to_25", "upper_25"]))
@@ -132,7 +131,7 @@ async def callback_discount(call: types.CallbackQuery, callback_data: dict):
         logger.info(f'User {call.from_user.username} started bot')
         await call.answer(text=f"Siz {config.BUTTONS.get(percent)} deıingi jeńildikterdi tańdadyńyz.",
                           show_alert=True)
-        await call.message.delete()
+        return await call.message.delete()
     else:
         logger.error(f'Could not POST user {call.from_user.id}\n{resp.text}')
 
@@ -145,17 +144,17 @@ async def get_urls(message: types.Message):
         cato_id = re.findall('\d{9}', url.query)
         if not cato_id:
             await message.reply(f"Url qala tabylmady. Tómendegi sýrettegideı qalany tańdańyz")
-            return await message.answer_photo('AgACAgIAAxkBAAICbWI66Is_0qQ5JiQO9RwhX6txokQdAAKcuTEboiTQSbaR9Js62MbyAQADAgADcwADIwQ')
+            return await message.answer_photo(config.telegram_images['url_town_not_found'])
         id, title, desc = await parser.parse_kaspi_title_desc(message.text)
         db_resp = requests.post(config.db_service_api + 'subs/',
                                 params={'user_id': message.from_user.id},
                                 data=json.dumps({
-                                 'id': id,
-                                 'title': title,
-                                 'description': desc,
-                                 'source': url.netloc,
-                                 'cato_id': cato_id[0],
-                                 'url': message.text
+                                    'id': id,
+                                    'title': title,
+                                    'description': desc,
+                                    'source': url.netloc,
+                                    'cato_id': cato_id[0],
+                                    'url': message.text
                                 }))
         if db_resp.status_code == 200:
             logger.info(f'User {message.from_user.username} added item {title}')
@@ -167,7 +166,7 @@ async def get_urls(message: types.Message):
             logger.error(f'Cant POST {db_resp.status_code}\n{db_resp.text}')
             return await message.reply(f"URL tanylmady, ony durys engizińiz.")
     else:
-        logger.info(f'User {message.from_user.username} added unknown item {url}')
+        logger.info(f'User {message.from_user.username} tried to add unknown item {url}')
         return await message.reply(f"Alynǵan url anyqtalmady.")
 
 
@@ -178,22 +177,22 @@ async def send_notification():
         users_list = json.loads(users_list.content)
         for user in users_list['results']:
             try:
-                text = 'Kelesi jeńildikter tabyldy:\n\n'
                 with httpx.Client() as client:
                     resp_items = client.get(config.db_service_api + f'get_item_price/?user_id={user["id"]}')
-                    if resp_items.status_code == 200:
-                        user_items = json.loads(resp_items.content)
-                    else:
-                        logger.error(f'Could not GET {resp_items.text}')
+                if resp_items.status_code == 200:
+                    user_items = json.loads(resp_items.content)
+                    text = 'Kelesi jeńildikter tabyldy:\n\n'
+                    for ind, user_item in enumerate(user_items):
+                        text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
+                        text += f'baǵasy: <b>{user_item["price"][0]["price"]}</b>; satýshy: <b>{user_item["price"][0]["seller"]}</b>    '
+                        text += f'(eski: <b>{user_item["price"][1]["price"]}</b>; satýshy: <b>{user_item["price"][1]["seller"]}</b>)\n'
+                        text += f'{user_item["item"]["url"]}\n\n'
+                    if user_items:
+                        logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+                        await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
                         continue
-                for ind, user_item in enumerate(user_items):
-                    text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
-                    text += f'baǵasy - {user_item["price"][0]["price"]} - {user_item["price"][0]["seller"]}     '
-                    text += f'(eski - {user_item["price"][1]["price"]} - {user_item["price"][1]["seller"]})\n'
-                    text += f'{user_item["item"]["url"]}\n\n'
-                if user_items:
-                    logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-                    await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
+                else:
+                    logger.error(f'Could not GET {resp_items.text}')
                     continue
             except Exception as e:
                 logger.error(f'Could not send notification {user["id"]}\n{e}')
