@@ -183,13 +183,12 @@ async def send_notification():
                     user_items = json.loads(resp_items.content)
                     text = 'Kelesi jeńildikter tabyldy:\n\n'
                     for ind, user_item in enumerate(user_items):
-                        text += f'<b>{ind + 1}) {user_item["item"]["title"]}</b>\n'
-                        text += f'baǵasy:  <b>{user_item["price"][0]["price"]}</b>;   satýshy:  <b>{user_item["price"][0]["seller"]}</b> \n'
-                        text += f' (eski:  <b>{user_item["price"][1]["price"]}</b>;   satýshy:  <b>{user_item["price"][1]["seller"]}</b>)\n'
-                        text += f'{user_item["item"]["url"]}\n\n'
+                        text += f'<b>{ind + 1})</b> <a href=\"{user_item["item"]["url"]}\">{user_item["item"]["title"]} </a>\n'
+                        text += f'baǵasy:  <b>{user_item["price"][0]["price"]};</b>    satýshy:  <b>{user_item["price"][0]["seller"]}</b> \n'
+                        text += f'(eski:  <s>{user_item["price"][1]["price"]}</s> - {user_item["price"][1]["seller"]})\n\n'
                     if user_items:
                         logger.info(f'User {user["username"]} received notifications at {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-                        await dp.bot.send_message(chat_id=user["id"], text=text, disable_web_page_preview=True)
+                        await bot.send_message(user['id'], text=text, parse_mode="HTML", disable_web_page_preview=True)
                         continue
                 else:
                     logger.error(f'Could not GET {resp_items.text}')
@@ -202,16 +201,16 @@ async def send_notification():
     return
 
 
-async def on_startup(_):
-    asyncio.create_task(scheduler())
-    # await bot.set_webhook(WEBHOOK_URL)
-
-
 async def scheduler():
     aioschedule.every().day.at("18:00").do(send_notification)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
+
+
+async def on_startup(_):
+    asyncio.create_task(scheduler())
+    # await bot.set_webhook(WEBHOOK_URL)
 
 
 async def on_shutdown(dp):

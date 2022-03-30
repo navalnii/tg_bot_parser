@@ -34,7 +34,6 @@ def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)) -> 
     db_user = user_crud.get_user(db, user_id=user.id)
     if db_user:
         return user_crud.update_user(db=db, user=user)
-        # raise HTTPException(status_code=400, detail="User already existed")
     return user_crud.create_user(db=db, user=user)
 
 
@@ -48,14 +47,6 @@ def get_items_user(user_id: int, db: Session = Depends(get_db)) -> object:
 def get_urls(db: Session = Depends(get_db)) -> object:
     res = item_crud.get_items(db)
     return {'results': list(res)}
-
-
-# @app.post("/item/", response_model=item_schema.Item)
-# def create_item(item: item_schema.ItemCreate, db: Session = Depends(get_db)):
-#     db_item = item_crud.get_item(db, item_id=item.id)
-#     if db_item:
-#         raise HTTPException(status_code=400, detail="Item already existed")
-#     return item_crud.create_item(db=db, item=item)
 
 
 @app.post("/subs/", response_model=subscription_schema.Subscription)
@@ -76,7 +67,7 @@ def create_subs(item: item_schema.ItemCreate, user_id: int, db: Session = Depend
 
 @app.post("/item_price/", response_model=price_schema.Price)
 def create_price(price: price_schema.PriceCreate, db: Session = Depends(get_db)):
-    return price_crud.create_price(db=db, price=price)
+    return price_crud.create_price_if_not_exist(db=db, price=price)
 
 
 @app.get("/get_item_price/")
@@ -91,7 +82,7 @@ def get_item_price(user_id: int, db: Session = Depends(get_db)):
             try:
                 diff_percent = (prices[1].price - prices[0].price) / prices[0].price
             except IndexError:
-                logger.info(f'Could not diff prices {item}')
+                logger.exception(f'Could not diff prices {item}')
                 continue
             if user_info.discount_perc == 'under_15' and 0 < diff_percent:
                 results.append({'item': item, 'price': prices})
@@ -120,7 +111,4 @@ async def validate_ip(request: Request, call_next):
 
 if __name__ == '__main__':
     uvicorn.run(app, host="0.0.0.0", port=8080)
-
-
-
 
